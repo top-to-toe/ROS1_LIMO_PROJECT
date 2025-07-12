@@ -1,0 +1,4 @@
+<launch>
+  <node pkg="limo_base" type="odom_node" name="odom_node" output="screen" />
+  <node pkg="limo_camera" type="camera_node" name="camera_node" output="screen" />
+</launch>

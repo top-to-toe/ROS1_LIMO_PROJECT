@@ -1,0 +1,7 @@
+\subsubsection usage Usage
+\verbatim
+<node name="simpleParameter" pkg="hello_ros" type="simpleParameter">
+  <param name="para1" type="int" value="100" />
+</node>
+\endverbatim
+

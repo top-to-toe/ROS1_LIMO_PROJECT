@@ -1,0 +1,119 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Robot Data Display</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #f4f4f9;
+            margin: 0;
+            padding: 20px;
+        }
+        .container {
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+        }
+        .data-section {
+            padding: 15px;
+            border: 1px solid #ccc;
+            border-radius: 5px;
+            background-color: #fff;
+        }
+        .title {
+            font-size: 1.5rem;
+            margin-bottom: 10px;
+        }
+        #camera-feed {
+            width: 100%;
+            height: 300px;
+            background-color: #000;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+    </style>
+</head>
+<body>
+
+    <h1>Robot Data Display</h1>
+    
+    <div class="container">
+        <div id="pose" class="data-section">
+            <div class="title">Pose</div>
+            <p><strong>X:</strong> <span id="pose-x">N/A</span></p>
+            <p><strong>Y:</strong> <span id="pose-y">N/A</span></p>
+            <p><strong>Theta:</strong> <span id="pose-theta">N/A</span></p>
+        </div>
+
+        <div id="velocity" class="data-section">
+            <div class="title">Velocity</div>
+            <p><strong>Linear:</strong> <span id="velocity-linear">N/A</span></p>
+            <p><strong>Angular:</strong> <span id="velocity-angular">N/A</span></p>
+        </div>
+
+        <div id="battery" class="data-section">
+            <div class="title">Battery Status</div>
+            <p><strong>Battery Percentage:</strong> <span id="battery-percentage">N/A</span>%</p>
+        </div>
+
+        <div id="camera-feed" class="data-section">
+            <div class="title">Camera Feed</div>
+            <img id="camera-image" src="" alt="Camera feed not available" />
+        </div>
+
+        <div id="path" class="data-section">
+            <div class="title">Path</div>
+            <pre id="path-data">No path data available</pre>
+        </div>
+
+        <div id="scan" class="data-section">
+            <div class="title">Lidar Scan</div>
+            <pre id="scan-data">No scan data available</pre>
+        </div>
+    </div>
+
+    <!-- Include the Socket.IO client library -->
+    <script src="https://cdn.socket.io/4.0.0/socket.io.min.js"></script>
+    <script>
+        const socket = io('http://localhost:8000'); // Connect to FastAPI server
+
+        // Listen for pose update
+        socket.on('pose_update', (data) => {
+            document.getElementById('pose-x').innerText = data.x || 'N/A';
+            document.getElementById('pose-y').innerText = data.y || 'N/A';
+            document.getElementById('pose-theta').innerText = data.theta || 'N/A';
+        });
+
+        // Listen for velocity update
+        socket.on('velocity_update', (data) => {
+            document.getElementById('velocity-linear').innerText = data.linear || 'N/A';
+            document.getElementById('velocity-angular').innerText = data.angular || 'N/A';
+        });
+
+        // Listen for battery update
+        socket.on('battery_update', (data) => {
+            document.getElementById('battery-percentage').innerText = data.percentage || 'N/A';
+        });
+
+        // Listen for camera feed update
+        socket.on('camera_update', (data) => {
+            const imageElement = document.getElementById('camera-image');
+            imageElement.src = `data:image/jpeg;base64,${data.image}`; // Display the image
+        });
+
+        // Listen for path update
+        socket.on('path_update', (data) => {
+            document.getElementById('path-data').innerText = JSON.stringify(data.points, null, 2);
+        });
+
+        // Listen for lidar scan update
+        socket.on('scan_update', (data) => {
+            document.getElementById('scan-data').innerText = JSON.stringify(data.ranges, null, 2);
+        });
+    </script>
+
+</body>
+</html>

@@ -1,0 +1,7 @@
+set(hello_ros_SETUP_PY_SETUP_MODULE "distutils.core")
+set(hello_ros_SETUP_PY_VERSION "0.0.0")
+set(hello_ros_SETUP_PY_SCRIPTS "")
+set(hello_ros_SETUP_PY_PACKAGES "hello_ros")
+set(hello_ros_SETUP_PY_PACKAGE_DIRS "src/hello_ros")
+set(hello_ros_SETUP_PY_MODULES "")
+set(hello_ros_SETUP_PY_MODULE_DIRS "")

@@ -1,0 +1,7 @@
+\subsubsection usage Usage
+\verbatim
+<node name="hello" pkg="hello_ros" type="hello">
+  <param name="angle_vel" type="double" value="3.0" />
+</node>
+\endverbatim
+

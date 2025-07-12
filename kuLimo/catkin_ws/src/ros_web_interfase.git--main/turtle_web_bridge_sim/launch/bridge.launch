@@ -1,0 +1,5 @@
+<launch>
+    <node name="bridge_node" pkg="turtle_web_bridge_sim" type="bridge_node.py" output="screen">
+        <!-- <param name="use_sim_time" value="true"/> -->
+    </node>
+</launch>

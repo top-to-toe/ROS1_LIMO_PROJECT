@@ -1,0 +1,8 @@
+prefix=/home/sejongtp07/kuLimo/catkin_ws/devel
+
+Name: limo_application
+Description: Description of limo_application
+Version: 0.0.0
+Cflags: 
+Libs: -L${prefix}/lib 
+Requires: 

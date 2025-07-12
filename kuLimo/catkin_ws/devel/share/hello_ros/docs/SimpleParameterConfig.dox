@@ -1,0 +1,6 @@
+\subsubsection parameters ROS parameters
+
+Reads and maintains the following parameters on the ROS server
+
+- \b "~para1" : \b [int] An integer parameter min: 0, default: 100, max: 1000
+
