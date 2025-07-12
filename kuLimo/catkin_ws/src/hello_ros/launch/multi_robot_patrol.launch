@@ -1,0 +1,30 @@
+<launch>
+    <node name="patrol_limo" pkg="hello_ros" type="patrol_limo" output="screen"/>
+    <!-- <group ns="robot1">
+        <arg name="robot_name" value="robot1" />
+
+        <node pkg="hello_ros" type="patrol_limo" name="patrol_node" output="screen" 
+              args="$(arg robot_name)"/>
+
+        <include file="$(find limo_bringup)/launch/limo_navigation_diff.launch" />
+
+        <include file="$(find limo_bringup)/launch/limo_start.launch"> 
+             <arg name="robot_namespace" value="robot1"/> 
+             <arg name="tf_prefix" value="robot1"/>
+        </include>
+    </group>
+
+    <group ns="robot2">
+        <arg name="robot_name" value="robot2" />
+
+        <node pkg="hello_ros" type="patrol_limo" name="patrol_node" output="screen" 
+              args="$(arg robot_name)"/>
+
+        <include file="$(find limo_bringup)/launch/limo_navigation_diff.launch" />
+
+        <include file="$(find limo_bringup)/launch/limo_start.launch">
+             <arg name="robot_namespace" value="robot2"/>
+             <arg name="tf_prefix" value="robot2"/>
+        </include>
+    </group> -->
+</launch>
