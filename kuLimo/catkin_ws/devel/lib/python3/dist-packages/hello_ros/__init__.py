@@ -6,7 +6,7 @@ from os import path as os_path
 from pkgutil import extend_path
 from sys import path as sys_path
 
-__extended_path = '/home/sejongtp07/kuLimo/catkin_ws/src/hello_ros/src'.split(';')
+__extended_path = '/home/sejongtp07/ROS1_LIMO_PROJECT/kuLimo/catkin_ws/src/hello_ros/src'.split(';')
 for p in reversed(__extended_path):
     sys_path.insert(0, p)
     del p

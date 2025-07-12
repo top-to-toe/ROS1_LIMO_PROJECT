@@ -1,8 +1,8 @@
-# Install script for directory: /home/sejongtp07/kuLimo/catkin_ws/src/ros_web_interfase.git--main/turtle_web_bridge_sim
+# Install script for directory: /home/sejongtp07/ROS1_LIMO_PROJECT/kuLimo/catkin_ws/src/ros_web_interfase.git--main/turtle_web_bridge_sim
 
 # Set the install prefix
 if(NOT DEFINED CMAKE_INSTALL_PREFIX)
-  set(CMAKE_INSTALL_PREFIX "/home/sejongtp07/kuLimo/catkin_ws/install")
+  set(CMAKE_INSTALL_PREFIX "/home/sejongtp07/ROS1_LIMO_PROJECT/kuLimo/catkin_ws/install")
 endif()
 string(REGEX REPLACE "/$" "" CMAKE_INSTALL_PREFIX "${CMAKE_INSTALL_PREFIX}")
 
@@ -38,21 +38,21 @@ if(NOT DEFINED CMAKE_CROSSCOMPILING)
 endif()
 
 if("x${CMAKE_INSTALL_COMPONENT}x" STREQUAL "xUnspecifiedx" OR NOT CMAKE_INSTALL_COMPONENT)
-  file(INSTALL DESTINATION "${CMAKE_INSTALL_PREFIX}/lib/pkgconfig" TYPE FILE FILES "/home/sejongtp07/kuLimo/catkin_ws/build/ros_web_interfase.git--main/turtle_web_bridge_sim/catkin_generated/installspace/turtle_web_bridge_sim.pc")
+  file(INSTALL DESTINATION "${CMAKE_INSTALL_PREFIX}/lib/pkgconfig" TYPE FILE FILES "/home/sejongtp07/ROS1_LIMO_PROJECT/kuLimo/catkin_ws/build/ros_web_interfase.git--main/turtle_web_bridge_sim/catkin_generated/installspace/turtle_web_bridge_sim.pc")
 endif()
 
 if("x${CMAKE_INSTALL_COMPONENT}x" STREQUAL "xUnspecifiedx" OR NOT CMAKE_INSTALL_COMPONENT)
   file(INSTALL DESTINATION "${CMAKE_INSTALL_PREFIX}/share/turtle_web_bridge_sim/cmake" TYPE FILE FILES
-    "/home/sejongtp07/kuLimo/catkin_ws/build/ros_web_interfase.git--main/turtle_web_bridge_sim/catkin_generated/installspace/turtle_web_bridge_simConfig.cmake"
-    "/home/sejongtp07/kuLimo/catkin_ws/build/ros_web_interfase.git--main/turtle_web_bridge_sim/catkin_generated/installspace/turtle_web_bridge_simConfig-version.cmake"
+    "/home/sejongtp07/ROS1_LIMO_PROJECT/kuLimo/catkin_ws/build/ros_web_interfase.git--main/turtle_web_bridge_sim/catkin_generated/installspace/turtle_web_bridge_simConfig.cmake"
+    "/home/sejongtp07/ROS1_LIMO_PROJECT/kuLimo/catkin_ws/build/ros_web_interfase.git--main/turtle_web_bridge_sim/catkin_generated/installspace/turtle_web_bridge_simConfig-version.cmake"
     )
 endif()
 
 if("x${CMAKE_INSTALL_COMPONENT}x" STREQUAL "xUnspecifiedx" OR NOT CMAKE_INSTALL_COMPONENT)
-  file(INSTALL DESTINATION "${CMAKE_INSTALL_PREFIX}/share/turtle_web_bridge_sim" TYPE FILE FILES "/home/sejongtp07/kuLimo/catkin_ws/src/ros_web_interfase.git--main/turtle_web_bridge_sim/package.xml")
+  file(INSTALL DESTINATION "${CMAKE_INSTALL_PREFIX}/share/turtle_web_bridge_sim" TYPE FILE FILES "/home/sejongtp07/ROS1_LIMO_PROJECT/kuLimo/catkin_ws/src/ros_web_interfase.git--main/turtle_web_bridge_sim/package.xml")
 endif()
 
 if("x${CMAKE_INSTALL_COMPONENT}x" STREQUAL "xUnspecifiedx" OR NOT CMAKE_INSTALL_COMPONENT)
-  file(INSTALL DESTINATION "${CMAKE_INSTALL_PREFIX}/lib/turtle_web_bridge_sim" TYPE PROGRAM FILES "/home/sejongtp07/kuLimo/catkin_ws/build/ros_web_interfase.git--main/turtle_web_bridge_sim/catkin_generated/installspace/bridge_node.py")
+  file(INSTALL DESTINATION "${CMAKE_INSTALL_PREFIX}/lib/turtle_web_bridge_sim" TYPE PROGRAM FILES "/home/sejongtp07/ROS1_LIMO_PROJECT/kuLimo/catkin_ws/build/ros_web_interfase.git--main/turtle_web_bridge_sim/catkin_generated/installspace/bridge_node.py")
 endif()
 

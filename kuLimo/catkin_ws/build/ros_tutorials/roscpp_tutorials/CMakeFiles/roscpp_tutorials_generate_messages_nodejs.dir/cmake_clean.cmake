@@ -1,5 +1,5 @@
 file(REMOVE_RECURSE
-  "/home/sejongtp07/kuLimo/catkin_ws/devel/share/gennodejs/ros/roscpp_tutorials/srv/TwoInts.js"
+  "/home/sejongtp07/ROS1_LIMO_PROJECT/kuLimo/catkin_ws/devel/share/gennodejs/ros/roscpp_tutorials/srv/TwoInts.js"
   "CMakeFiles/roscpp_tutorials_generate_messages_nodejs"
 )
 

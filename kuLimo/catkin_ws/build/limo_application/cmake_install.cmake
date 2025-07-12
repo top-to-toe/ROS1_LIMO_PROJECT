@@ -1,8 +1,8 @@
-# Install script for directory: /home/sejongtp07/kuLimo/catkin_ws/src/limo_application
+# Install script for directory: /home/sejongtp07/ROS1_LIMO_PROJECT/kuLimo/catkin_ws/src/limo_application
 
 # Set the install prefix
 if(NOT DEFINED CMAKE_INSTALL_PREFIX)
-  set(CMAKE_INSTALL_PREFIX "/home/sejongtp07/kuLimo/catkin_ws/install")
+  set(CMAKE_INSTALL_PREFIX "/home/sejongtp07/ROS1_LIMO_PROJECT/kuLimo/catkin_ws/install")
 endif()
 string(REGEX REPLACE "/$" "" CMAKE_INSTALL_PREFIX "${CMAKE_INSTALL_PREFIX}")
 
@@ -38,17 +38,17 @@ if(NOT DEFINED CMAKE_CROSSCOMPILING)
 endif()
 
 if("x${CMAKE_INSTALL_COMPONENT}x" STREQUAL "xUnspecifiedx" OR NOT CMAKE_INSTALL_COMPONENT)
-  file(INSTALL DESTINATION "${CMAKE_INSTALL_PREFIX}/lib/pkgconfig" TYPE FILE FILES "/home/sejongtp07/kuLimo/catkin_ws/build/limo_application/catkin_generated/installspace/limo_application.pc")
+  file(INSTALL DESTINATION "${CMAKE_INSTALL_PREFIX}/lib/pkgconfig" TYPE FILE FILES "/home/sejongtp07/ROS1_LIMO_PROJECT/kuLimo/catkin_ws/build/limo_application/catkin_generated/installspace/limo_application.pc")
 endif()
 
 if("x${CMAKE_INSTALL_COMPONENT}x" STREQUAL "xUnspecifiedx" OR NOT CMAKE_INSTALL_COMPONENT)
   file(INSTALL DESTINATION "${CMAKE_INSTALL_PREFIX}/share/limo_application/cmake" TYPE FILE FILES
-    "/home/sejongtp07/kuLimo/catkin_ws/build/limo_application/catkin_generated/installspace/limo_applicationConfig.cmake"
-    "/home/sejongtp07/kuLimo/catkin_ws/build/limo_application/catkin_generated/installspace/limo_applicationConfig-version.cmake"
+    "/home/sejongtp07/ROS1_LIMO_PROJECT/kuLimo/catkin_ws/build/limo_application/catkin_generated/installspace/limo_applicationConfig.cmake"
+    "/home/sejongtp07/ROS1_LIMO_PROJECT/kuLimo/catkin_ws/build/limo_application/catkin_generated/installspace/limo_applicationConfig-version.cmake"
     )
 endif()
 
 if("x${CMAKE_INSTALL_COMPONENT}x" STREQUAL "xUnspecifiedx" OR NOT CMAKE_INSTALL_COMPONENT)
-  file(INSTALL DESTINATION "${CMAKE_INSTALL_PREFIX}/share/limo_application" TYPE FILE FILES "/home/sejongtp07/kuLimo/catkin_ws/src/limo_application/package.xml")
+  file(INSTALL DESTINATION "${CMAKE_INSTALL_PREFIX}/share/limo_application" TYPE FILE FILES "/home/sejongtp07/ROS1_LIMO_PROJECT/kuLimo/catkin_ws/src/limo_application/package.xml")
 endif()
 

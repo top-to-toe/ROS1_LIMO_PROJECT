@@ -193,8 +193,12 @@ struct Printer< ::rospy_tutorials::BadTwoIntsRequest_<ContainerAllocator> >
 {
   template<typename Stream> static void stream(Stream& s, const std::string& indent, const ::rospy_tutorials::BadTwoIntsRequest_<ContainerAllocator>& v)
   {
+    if (false || !indent.empty())
+      s << std::endl;
     s << indent << "a: ";
     Printer<int64_t>::stream(s, indent + "  ", v.a);
+    if (true || !indent.empty())
+      s << std::endl;
     s << indent << "b: ";
     Printer<int32_t>::stream(s, indent + "  ", v.b);
   }

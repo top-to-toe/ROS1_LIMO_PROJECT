@@ -200,10 +200,16 @@ struct Printer< ::hello_ros::MyTopic_<ContainerAllocator> >
 {
   template<typename Stream> static void stream(Stream& s, const std::string& indent, const ::hello_ros::MyTopic_<ContainerAllocator>& v)
   {
+    if (false || !indent.empty())
+      s << std::endl;
     s << indent << "first_name: ";
     Printer<std::basic_string<char, std::char_traits<char>, typename std::allocator_traits<ContainerAllocator>::template rebind_alloc<char>>>::stream(s, indent + "  ", v.first_name);
+    if (true || !indent.empty())
+      s << std::endl;
     s << indent << "age: ";
     Printer<uint8_t>::stream(s, indent + "  ", v.age);
+    if (true || !indent.empty())
+      s << std::endl;
     s << indent << "score: ";
     Printer<uint32_t>::stream(s, indent + "  ", v.score);
   }

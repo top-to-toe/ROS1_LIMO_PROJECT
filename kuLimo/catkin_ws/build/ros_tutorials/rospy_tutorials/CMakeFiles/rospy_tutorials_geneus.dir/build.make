@@ -43,10 +43,10 @@ RM = /usr/bin/cmake -E remove -f
 EQUALS = =
 
 # The top-level source directory on which CMake was run.
-CMAKE_SOURCE_DIR = /home/sejongtp07/kuLimo/catkin_ws/src
+CMAKE_SOURCE_DIR = /home/sejongtp07/ROS1_LIMO_PROJECT/kuLimo/catkin_ws/src
 
 # The top-level build directory on which CMake was run.
-CMAKE_BINARY_DIR = /home/sejongtp07/kuLimo/catkin_ws/build
+CMAKE_BINARY_DIR = /home/sejongtp07/ROS1_LIMO_PROJECT/kuLimo/catkin_ws/build
 
 # Utility rule file for rospy_tutorials_geneus.
 
@@ -63,10 +63,10 @@ ros_tutorials/rospy_tutorials/CMakeFiles/rospy_tutorials_geneus.dir/build: rospy
 .PHONY : ros_tutorials/rospy_tutorials/CMakeFiles/rospy_tutorials_geneus.dir/build
 
 ros_tutorials/rospy_tutorials/CMakeFiles/rospy_tutorials_geneus.dir/clean:
-	cd /home/sejongtp07/kuLimo/catkin_ws/build/ros_tutorials/rospy_tutorials && $(CMAKE_COMMAND) -P CMakeFiles/rospy_tutorials_geneus.dir/cmake_clean.cmake
+	cd /home/sejongtp07/ROS1_LIMO_PROJECT/kuLimo/catkin_ws/build/ros_tutorials/rospy_tutorials && $(CMAKE_COMMAND) -P CMakeFiles/rospy_tutorials_geneus.dir/cmake_clean.cmake
 .PHONY : ros_tutorials/rospy_tutorials/CMakeFiles/rospy_tutorials_geneus.dir/clean
 
 ros_tutorials/rospy_tutorials/CMakeFiles/rospy_tutorials_geneus.dir/depend:
-	cd /home/sejongtp07/kuLimo/catkin_ws/build && $(CMAKE_COMMAND) -E cmake_depends "Unix Makefiles" /home/sejongtp07/kuLimo/catkin_ws/src /home/sejongtp07/kuLimo/catkin_ws/src/ros_tutorials/rospy_tutorials /home/sejongtp07/kuLimo/catkin_ws/build /home/sejongtp07/kuLimo/catkin_ws/build/ros_tutorials/rospy_tutorials /home/sejongtp07/kuLimo/catkin_ws/build/ros_tutorials/rospy_tutorials/CMakeFiles/rospy_tutorials_geneus.dir/DependInfo.cmake --color=$(COLOR)
+	cd /home/sejongtp07/ROS1_LIMO_PROJECT/kuLimo/catkin_ws/build && $(CMAKE_COMMAND) -E cmake_depends "Unix Makefiles" /home/sejongtp07/ROS1_LIMO_PROJECT/kuLimo/catkin_ws/src /home/sejongtp07/ROS1_LIMO_PROJECT/kuLimo/catkin_ws/src/ros_tutorials/rospy_tutorials /home/sejongtp07/ROS1_LIMO_PROJECT/kuLimo/catkin_ws/build /home/sejongtp07/ROS1_LIMO_PROJECT/kuLimo/catkin_ws/build/ros_tutorials/rospy_tutorials /home/sejongtp07/ROS1_LIMO_PROJECT/kuLimo/catkin_ws/build/ros_tutorials/rospy_tutorials/CMakeFiles/rospy_tutorials_geneus.dir/DependInfo.cmake --color=$(COLOR)
 .PHONY : ros_tutorials/rospy_tutorials/CMakeFiles/rospy_tutorials_geneus.dir/depend
 

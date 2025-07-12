@@ -1,6 +1,6 @@
 file(REMOVE_RECURSE
-  "/home/sejongtp07/kuLimo/catkin_ws/devel/lib/liblimo_gazebo.a"
-  "/home/sejongtp07/kuLimo/catkin_ws/devel/lib/liblimo_gazebo.pdb"
+  "/home/sejongtp07/ROS1_LIMO_PROJECT/kuLimo/catkin_ws/devel/lib/liblimo_gazebo.a"
+  "/home/sejongtp07/ROS1_LIMO_PROJECT/kuLimo/catkin_ws/devel/lib/liblimo_gazebo.pdb"
   "CMakeFiles/limo_gazebo.dir/src/limo_skid_steer.cpp.o"
 )
 

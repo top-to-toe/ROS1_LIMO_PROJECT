@@ -6,11 +6,11 @@
 
 #IncludeRegexTransform: 
 
-/home/sejongtp07/kuLimo/catkin_ws/src/ros_tutorials/roscpp_tutorials/time_api/sleep/sleep.cpp
+/home/sejongtp07/ROS1_LIMO_PROJECT/kuLimo/catkin_ws/src/ros_tutorials/roscpp_tutorials/time_api/sleep/sleep.cpp
 cstdio
 -
 ros/time.h
-/home/sejongtp07/kuLimo/catkin_ws/src/ros_tutorials/roscpp_tutorials/time_api/sleep/ros/time.h
+/home/sejongtp07/ROS1_LIMO_PROJECT/kuLimo/catkin_ws/src/ros_tutorials/roscpp_tutorials/time_api/sleep/ros/time.h
 
 /opt/ros/noetic/include/ros/duration.h
 iostream

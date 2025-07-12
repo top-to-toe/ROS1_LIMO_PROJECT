@@ -6,7 +6,7 @@
 
 #IncludeRegexTransform: 
 
-/home/sejongtp07/kuLimo/catkin_ws/devel/include/turtlesim/Pose.h
+/home/sejongtp07/ROS1_LIMO_PROJECT/kuLimo/catkin_ws/devel/include/turtlesim/Pose.h
 string
 -
 vector
@@ -22,7 +22,7 @@ ros/builtin_message_traits.h
 ros/message_operations.h
 -
 
-/home/sejongtp07/kuLimo/catkin_ws/src/ros_tutorials/turtlesim/tutorials/mimic.cpp
+/home/sejongtp07/ROS1_LIMO_PROJECT/kuLimo/catkin_ws/src/ros_tutorials/turtlesim/tutorials/mimic.cpp
 ros/ros.h
 -
 turtlesim/Pose.h
@@ -337,6 +337,8 @@ ros/init.h
 /opt/ros/noetic/include/ros/ros/init.h
 common.h
 /opt/ros/noetic/include/ros/common.h
+boost/bind/bind.hpp
+-
 xmlrpcpp/XmlRpcValue.h
 -
 

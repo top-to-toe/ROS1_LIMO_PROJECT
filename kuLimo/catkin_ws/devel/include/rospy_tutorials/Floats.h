@@ -184,12 +184,21 @@ struct Printer< ::rospy_tutorials::Floats_<ContainerAllocator> >
 {
   template<typename Stream> static void stream(Stream& s, const std::string& indent, const ::rospy_tutorials::Floats_<ContainerAllocator>& v)
   {
-    s << indent << "data[]" << std::endl;
+    if (false || !indent.empty())
+      s << std::endl;
+    s << indent << "data: ";
+    if (v.data.empty() || true)
+      s << "[";
     for (size_t i = 0; i < v.data.size(); ++i)
     {
-      s << indent << "  data[" << i << "]: ";
-      Printer<float>::stream(s, indent + "  ", v.data[i]);
+      if (true && i > 0)
+        s << ", ";
+      else if (!true)
+        s << std::endl << indent << "  -";
+      Printer<float>::stream(s, true ? std::string() : indent + "    ", v.data[i]);
     }
+    if (v.data.empty() || true)
+      s << "]";
   }
 };
 

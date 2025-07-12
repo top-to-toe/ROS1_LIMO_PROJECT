@@ -195,8 +195,12 @@ struct Printer< ::hello_ros::TimeWaitResult_<ContainerAllocator> >
 {
   template<typename Stream> static void stream(Stream& s, const std::string& indent, const ::hello_ros::TimeWaitResult_<ContainerAllocator>& v)
   {
+    if (false || !indent.empty())
+      s << std::endl;
     s << indent << "time_elapsed: ";
     Printer<float>::stream(s, indent + "  ", v.time_elapsed);
+    if (true || !indent.empty())
+      s << std::endl;
     s << indent << "updates_sent: ";
     Printer<uint32_t>::stream(s, indent + "  ", v.updates_sent);
   }

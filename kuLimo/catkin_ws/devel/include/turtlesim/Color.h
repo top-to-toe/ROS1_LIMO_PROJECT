@@ -200,10 +200,16 @@ struct Printer< ::turtlesim::Color_<ContainerAllocator> >
 {
   template<typename Stream> static void stream(Stream& s, const std::string& indent, const ::turtlesim::Color_<ContainerAllocator>& v)
   {
+    if (false || !indent.empty())
+      s << std::endl;
     s << indent << "r: ";
     Printer<uint8_t>::stream(s, indent + "  ", v.r);
+    if (true || !indent.empty())
+      s << std::endl;
     s << indent << "g: ";
     Printer<uint8_t>::stream(s, indent + "  ", v.g);
+    if (true || !indent.empty())
+      s << std::endl;
     s << indent << "b: ";
     Printer<uint8_t>::stream(s, indent + "  ", v.b);
   }

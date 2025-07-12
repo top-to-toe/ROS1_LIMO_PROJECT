@@ -1,6 +1,6 @@
 file(REMOVE_RECURSE
-  "/home/sejongtp07/kuLimo/catkin_ws/devel/lib/turtlesim/turtlesim_node"
-  "/home/sejongtp07/kuLimo/catkin_ws/devel/lib/turtlesim/turtlesim_node.pdb"
+  "/home/sejongtp07/ROS1_LIMO_PROJECT/kuLimo/catkin_ws/devel/lib/turtlesim/turtlesim_node"
+  "/home/sejongtp07/ROS1_LIMO_PROJECT/kuLimo/catkin_ws/devel/lib/turtlesim/turtlesim_node.pdb"
   "CMakeFiles/turtlesim_node.dir/include/turtlesim/moc_turtle_frame.cpp.o"
   "CMakeFiles/turtlesim_node.dir/src/turtle.cpp.o"
   "CMakeFiles/turtlesim_node.dir/src/turtle_frame.cpp.o"

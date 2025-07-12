@@ -67,14 +67,14 @@ set(basics_CONFIG_INCLUDED TRUE)
 
 # set variables for source/devel/install prefixes
 if("FALSE" STREQUAL "TRUE")
-  set(basics_SOURCE_PREFIX /home/sejongtp07/kuLimo/catkin_ws/src/basics)
-  set(basics_DEVEL_PREFIX /home/sejongtp07/kuLimo/catkin_ws/devel)
+  set(basics_SOURCE_PREFIX /home/sejongtp07/ROS1_LIMO_PROJECT/kuLimo/catkin_ws/src/basics)
+  set(basics_DEVEL_PREFIX /home/sejongtp07/ROS1_LIMO_PROJECT/kuLimo/catkin_ws/devel)
   set(basics_INSTALL_PREFIX "")
   set(basics_PREFIX ${basics_DEVEL_PREFIX})
 else()
   set(basics_SOURCE_PREFIX "")
   set(basics_DEVEL_PREFIX "")
-  set(basics_INSTALL_PREFIX /home/sejongtp07/kuLimo/catkin_ws/install)
+  set(basics_INSTALL_PREFIX /home/sejongtp07/ROS1_LIMO_PROJECT/kuLimo/catkin_ws/install)
   set(basics_PREFIX ${basics_INSTALL_PREFIX})
 endif()
 
@@ -156,7 +156,7 @@ foreach(library ${libraries})
     set(lib_path "")
     set(lib "${library}-NOTFOUND")
     # since the path where the library is found is returned we have to iterate over the paths manually
-    foreach(path /home/sejongtp07/kuLimo/catkin_ws/install/lib;/home/sejongtp07/kuLimo/catkin_ws/devel/lib;/opt/ros/noetic/lib)
+    foreach(path /home/sejongtp07/ROS1_LIMO_PROJECT/kuLimo/catkin_ws/install/lib;/home/sejongtp07/ROS1_LIMO_PROJECT/kuLimo/catkin_ws/devel/lib;/opt/ros/noetic/lib)
       find_library(lib ${library}
         PATHS ${path}
         NO_DEFAULT_PATH NO_CMAKE_FIND_ROOT_PATH)

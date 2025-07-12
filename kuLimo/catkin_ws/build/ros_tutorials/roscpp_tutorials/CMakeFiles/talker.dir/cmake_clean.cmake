@@ -1,6 +1,6 @@
 file(REMOVE_RECURSE
-  "/home/sejongtp07/kuLimo/catkin_ws/devel/lib/roscpp_tutorials/talker"
-  "/home/sejongtp07/kuLimo/catkin_ws/devel/lib/roscpp_tutorials/talker.pdb"
+  "/home/sejongtp07/ROS1_LIMO_PROJECT/kuLimo/catkin_ws/devel/lib/roscpp_tutorials/talker"
+  "/home/sejongtp07/ROS1_LIMO_PROJECT/kuLimo/catkin_ws/devel/lib/roscpp_tutorials/talker.pdb"
   "CMakeFiles/talker.dir/talker/talker.cpp.o"
 )
 

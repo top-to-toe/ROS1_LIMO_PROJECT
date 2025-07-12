@@ -1,6 +1,6 @@
 file(REMOVE_RECURSE
-  "/home/sejongtp07/kuLimo/catkin_ws/devel/lib/roscpp_tutorials/add_two_ints_server"
-  "/home/sejongtp07/kuLimo/catkin_ws/devel/lib/roscpp_tutorials/add_two_ints_server.pdb"
+  "/home/sejongtp07/ROS1_LIMO_PROJECT/kuLimo/catkin_ws/devel/lib/roscpp_tutorials/add_two_ints_server"
+  "/home/sejongtp07/ROS1_LIMO_PROJECT/kuLimo/catkin_ws/devel/lib/roscpp_tutorials/add_two_ints_server.pdb"
   "CMakeFiles/add_two_ints_server.dir/add_two_ints_server/add_two_ints_server.cpp.o"
 )
 

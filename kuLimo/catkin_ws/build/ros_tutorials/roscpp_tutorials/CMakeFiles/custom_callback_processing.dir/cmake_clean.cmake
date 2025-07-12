@@ -1,6 +1,6 @@
 file(REMOVE_RECURSE
-  "/home/sejongtp07/kuLimo/catkin_ws/devel/lib/roscpp_tutorials/custom_callback_processing"
-  "/home/sejongtp07/kuLimo/catkin_ws/devel/lib/roscpp_tutorials/custom_callback_processing.pdb"
+  "/home/sejongtp07/ROS1_LIMO_PROJECT/kuLimo/catkin_ws/devel/lib/roscpp_tutorials/custom_callback_processing"
+  "/home/sejongtp07/ROS1_LIMO_PROJECT/kuLimo/catkin_ws/devel/lib/roscpp_tutorials/custom_callback_processing.pdb"
   "CMakeFiles/custom_callback_processing.dir/custom_callback_processing/custom_callback_processing.cpp.o"
 )
 

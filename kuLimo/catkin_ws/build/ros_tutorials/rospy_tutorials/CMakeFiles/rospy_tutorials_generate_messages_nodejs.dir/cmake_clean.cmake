@@ -1,8 +1,8 @@
 file(REMOVE_RECURSE
-  "/home/sejongtp07/kuLimo/catkin_ws/devel/share/gennodejs/ros/rospy_tutorials/msg/Floats.js"
-  "/home/sejongtp07/kuLimo/catkin_ws/devel/share/gennodejs/ros/rospy_tutorials/msg/HeaderString.js"
-  "/home/sejongtp07/kuLimo/catkin_ws/devel/share/gennodejs/ros/rospy_tutorials/srv/AddTwoInts.js"
-  "/home/sejongtp07/kuLimo/catkin_ws/devel/share/gennodejs/ros/rospy_tutorials/srv/BadTwoInts.js"
+  "/home/sejongtp07/ROS1_LIMO_PROJECT/kuLimo/catkin_ws/devel/share/gennodejs/ros/rospy_tutorials/msg/Floats.js"
+  "/home/sejongtp07/ROS1_LIMO_PROJECT/kuLimo/catkin_ws/devel/share/gennodejs/ros/rospy_tutorials/msg/HeaderString.js"
+  "/home/sejongtp07/ROS1_LIMO_PROJECT/kuLimo/catkin_ws/devel/share/gennodejs/ros/rospy_tutorials/srv/AddTwoInts.js"
+  "/home/sejongtp07/ROS1_LIMO_PROJECT/kuLimo/catkin_ws/devel/share/gennodejs/ros/rospy_tutorials/srv/BadTwoInts.js"
   "CMakeFiles/rospy_tutorials_generate_messages_nodejs"
 )
 

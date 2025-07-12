@@ -1,4 +1,4 @@
-prefix=/home/sejongtp07/kuLimo/catkin_ws/install
+prefix=/home/sejongtp07/ROS1_LIMO_PROJECT/kuLimo/catkin_ws/install
 
 Name: basics
 Description: Description of basics

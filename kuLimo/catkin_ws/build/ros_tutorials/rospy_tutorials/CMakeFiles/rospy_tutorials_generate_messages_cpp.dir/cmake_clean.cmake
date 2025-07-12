@@ -1,8 +1,8 @@
 file(REMOVE_RECURSE
-  "/home/sejongtp07/kuLimo/catkin_ws/devel/include/rospy_tutorials/AddTwoInts.h"
-  "/home/sejongtp07/kuLimo/catkin_ws/devel/include/rospy_tutorials/BadTwoInts.h"
-  "/home/sejongtp07/kuLimo/catkin_ws/devel/include/rospy_tutorials/Floats.h"
-  "/home/sejongtp07/kuLimo/catkin_ws/devel/include/rospy_tutorials/HeaderString.h"
+  "/home/sejongtp07/ROS1_LIMO_PROJECT/kuLimo/catkin_ws/devel/include/rospy_tutorials/AddTwoInts.h"
+  "/home/sejongtp07/ROS1_LIMO_PROJECT/kuLimo/catkin_ws/devel/include/rospy_tutorials/BadTwoInts.h"
+  "/home/sejongtp07/ROS1_LIMO_PROJECT/kuLimo/catkin_ws/devel/include/rospy_tutorials/Floats.h"
+  "/home/sejongtp07/ROS1_LIMO_PROJECT/kuLimo/catkin_ws/devel/include/rospy_tutorials/HeaderString.h"
   "CMakeFiles/rospy_tutorials_generate_messages_cpp"
 )
 

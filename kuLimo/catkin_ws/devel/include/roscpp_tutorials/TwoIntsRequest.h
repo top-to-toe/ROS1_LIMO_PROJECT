@@ -192,8 +192,12 @@ struct Printer< ::roscpp_tutorials::TwoIntsRequest_<ContainerAllocator> >
 {
   template<typename Stream> static void stream(Stream& s, const std::string& indent, const ::roscpp_tutorials::TwoIntsRequest_<ContainerAllocator>& v)
   {
+    if (false || !indent.empty())
+      s << std::endl;
     s << indent << "a: ";
     Printer<int64_t>::stream(s, indent + "  ", v.a);
+    if (true || !indent.empty())
+      s << std::endl;
     s << indent << "b: ";
     Printer<int64_t>::stream(s, indent + "  ", v.b);
   }

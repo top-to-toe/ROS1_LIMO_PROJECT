@@ -1,6 +1,6 @@
 file(REMOVE_RECURSE
-  "/home/sejongtp07/kuLimo/catkin_ws/devel/lib/turtlesim/draw_square"
-  "/home/sejongtp07/kuLimo/catkin_ws/devel/lib/turtlesim/draw_square.pdb"
+  "/home/sejongtp07/ROS1_LIMO_PROJECT/kuLimo/catkin_ws/devel/lib/turtlesim/draw_square"
+  "/home/sejongtp07/ROS1_LIMO_PROJECT/kuLimo/catkin_ws/devel/lib/turtlesim/draw_square.pdb"
   "CMakeFiles/draw_square.dir/tutorials/draw_square.cpp.o"
 )
 

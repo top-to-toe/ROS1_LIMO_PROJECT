@@ -1,6 +1,6 @@
 file(REMOVE_RECURSE
-  "/home/sejongtp07/kuLimo/catkin_ws/devel/lib/roscpp_tutorials/notify_connect"
-  "/home/sejongtp07/kuLimo/catkin_ws/devel/lib/roscpp_tutorials/notify_connect.pdb"
+  "/home/sejongtp07/ROS1_LIMO_PROJECT/kuLimo/catkin_ws/devel/lib/roscpp_tutorials/notify_connect"
+  "/home/sejongtp07/ROS1_LIMO_PROJECT/kuLimo/catkin_ws/devel/lib/roscpp_tutorials/notify_connect.pdb"
   "CMakeFiles/notify_connect.dir/notify_connect/notify_connect.cpp.o"
 )
 

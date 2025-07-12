@@ -1,11 +1,11 @@
 file(REMOVE_RECURSE
-  "/home/sejongtp07/kuLimo/catkin_ws/devel/share/gennodejs/ros/turtlesim/msg/Color.js"
-  "/home/sejongtp07/kuLimo/catkin_ws/devel/share/gennodejs/ros/turtlesim/msg/Pose.js"
-  "/home/sejongtp07/kuLimo/catkin_ws/devel/share/gennodejs/ros/turtlesim/srv/Kill.js"
-  "/home/sejongtp07/kuLimo/catkin_ws/devel/share/gennodejs/ros/turtlesim/srv/SetPen.js"
-  "/home/sejongtp07/kuLimo/catkin_ws/devel/share/gennodejs/ros/turtlesim/srv/Spawn.js"
-  "/home/sejongtp07/kuLimo/catkin_ws/devel/share/gennodejs/ros/turtlesim/srv/TeleportAbsolute.js"
-  "/home/sejongtp07/kuLimo/catkin_ws/devel/share/gennodejs/ros/turtlesim/srv/TeleportRelative.js"
+  "/home/sejongtp07/ROS1_LIMO_PROJECT/kuLimo/catkin_ws/devel/share/gennodejs/ros/turtlesim/msg/Color.js"
+  "/home/sejongtp07/ROS1_LIMO_PROJECT/kuLimo/catkin_ws/devel/share/gennodejs/ros/turtlesim/msg/Pose.js"
+  "/home/sejongtp07/ROS1_LIMO_PROJECT/kuLimo/catkin_ws/devel/share/gennodejs/ros/turtlesim/srv/Kill.js"
+  "/home/sejongtp07/ROS1_LIMO_PROJECT/kuLimo/catkin_ws/devel/share/gennodejs/ros/turtlesim/srv/SetPen.js"
+  "/home/sejongtp07/ROS1_LIMO_PROJECT/kuLimo/catkin_ws/devel/share/gennodejs/ros/turtlesim/srv/Spawn.js"
+  "/home/sejongtp07/ROS1_LIMO_PROJECT/kuLimo/catkin_ws/devel/share/gennodejs/ros/turtlesim/srv/TeleportAbsolute.js"
+  "/home/sejongtp07/ROS1_LIMO_PROJECT/kuLimo/catkin_ws/devel/share/gennodejs/ros/turtlesim/srv/TeleportRelative.js"
   "CMakeFiles/turtlesim_generate_messages_nodejs"
 )
 

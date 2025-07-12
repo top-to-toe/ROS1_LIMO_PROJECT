@@ -1,6 +1,6 @@
 file(REMOVE_RECURSE
-  "/home/sejongtp07/kuLimo/catkin_ws/devel/lib/turtlesim/mimic"
-  "/home/sejongtp07/kuLimo/catkin_ws/devel/lib/turtlesim/mimic.pdb"
+  "/home/sejongtp07/ROS1_LIMO_PROJECT/kuLimo/catkin_ws/devel/lib/turtlesim/mimic"
+  "/home/sejongtp07/ROS1_LIMO_PROJECT/kuLimo/catkin_ws/devel/lib/turtlesim/mimic.pdb"
   "CMakeFiles/mimic.dir/tutorials/mimic.cpp.o"
 )
 

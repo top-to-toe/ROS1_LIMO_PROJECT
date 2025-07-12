@@ -13,21 +13,21 @@ fi
 
 echo_and_run() { echo "+ $@" ; "$@" ; }
 
-echo_and_run cd "/home/sejongtp07/kuLimo/catkin_ws/src/hello_ros"
+echo_and_run cd "/home/sejongtp07/ROS1_LIMO_PROJECT/kuLimo/catkin_ws/src/hello_ros"
 
 # ensure that Python install destination exists
-echo_and_run mkdir -p "$DESTDIR/home/sejongtp07/kuLimo/catkin_ws/install/lib/python3/dist-packages"
+echo_and_run mkdir -p "$DESTDIR/home/sejongtp07/ROS1_LIMO_PROJECT/kuLimo/catkin_ws/install/lib/python3/dist-packages"
 
 # Note that PYTHONPATH is pulled from the environment to support installing
 # into one location when some dependencies were installed in another
 # location, #123.
 echo_and_run /usr/bin/env \
-    PYTHONPATH="/home/sejongtp07/kuLimo/catkin_ws/install/lib/python3/dist-packages:/home/sejongtp07/kuLimo/catkin_ws/build/lib/python3/dist-packages:$PYTHONPATH" \
-    CATKIN_BINARY_DIR="/home/sejongtp07/kuLimo/catkin_ws/build" \
+    PYTHONPATH="/home/sejongtp07/ROS1_LIMO_PROJECT/kuLimo/catkin_ws/install/lib/python3/dist-packages:/home/sejongtp07/ROS1_LIMO_PROJECT/kuLimo/catkin_ws/build/lib/python3/dist-packages:$PYTHONPATH" \
+    CATKIN_BINARY_DIR="/home/sejongtp07/ROS1_LIMO_PROJECT/kuLimo/catkin_ws/build" \
     "/usr/bin/python3" \
-    "/home/sejongtp07/kuLimo/catkin_ws/src/hello_ros/setup.py" \
+    "/home/sejongtp07/ROS1_LIMO_PROJECT/kuLimo/catkin_ws/src/hello_ros/setup.py" \
      \
-    build --build-base "/home/sejongtp07/kuLimo/catkin_ws/build/hello_ros" \
+    build --build-base "/home/sejongtp07/ROS1_LIMO_PROJECT/kuLimo/catkin_ws/build/hello_ros" \
     install \
     --root="${DESTDIR-/}" \
-    --install-layout=deb --prefix="/home/sejongtp07/kuLimo/catkin_ws/install" --install-scripts="/home/sejongtp07/kuLimo/catkin_ws/install/bin"
+    --install-layout=deb --prefix="/home/sejongtp07/ROS1_LIMO_PROJECT/kuLimo/catkin_ws/install" --install-scripts="/home/sejongtp07/ROS1_LIMO_PROJECT/kuLimo/catkin_ws/install/bin"

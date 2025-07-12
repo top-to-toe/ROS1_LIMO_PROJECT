@@ -1,7 +1,7 @@
 # generated from genmsg/cmake/pkg-genmsg.context.in
 
 messages_str = ""
-services_str = "/home/sejongtp07/kuLimo/catkin_ws/src/ros_tutorials/roscpp_tutorials/srv/TwoInts.srv"
+services_str = "/home/sejongtp07/ROS1_LIMO_PROJECT/kuLimo/catkin_ws/src/ros_tutorials/roscpp_tutorials/srv/TwoInts.srv"
 pkg_name = "roscpp_tutorials"
 dependencies_str = "std_msgs"
 langs = "gencpp;geneus;genlisp;gennodejs;genpy"

@@ -187,6 +187,8 @@ struct Printer< ::hello_ros::TimeWaitGoal_<ContainerAllocator> >
 {
   template<typename Stream> static void stream(Stream& s, const std::string& indent, const ::hello_ros::TimeWaitGoal_<ContainerAllocator>& v)
   {
+    if (false || !indent.empty())
+      s << std::endl;
     s << indent << "time_to_wait: ";
     Printer<float>::stream(s, indent + "  ", v.time_to_wait);
   }

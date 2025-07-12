@@ -1,11 +1,11 @@
 file(REMOVE_RECURSE
-  "/home/sejongtp07/kuLimo/catkin_ws/devel/include/turtlesim/Color.h"
-  "/home/sejongtp07/kuLimo/catkin_ws/devel/include/turtlesim/Kill.h"
-  "/home/sejongtp07/kuLimo/catkin_ws/devel/include/turtlesim/Pose.h"
-  "/home/sejongtp07/kuLimo/catkin_ws/devel/include/turtlesim/SetPen.h"
-  "/home/sejongtp07/kuLimo/catkin_ws/devel/include/turtlesim/Spawn.h"
-  "/home/sejongtp07/kuLimo/catkin_ws/devel/include/turtlesim/TeleportAbsolute.h"
-  "/home/sejongtp07/kuLimo/catkin_ws/devel/include/turtlesim/TeleportRelative.h"
+  "/home/sejongtp07/ROS1_LIMO_PROJECT/kuLimo/catkin_ws/devel/include/turtlesim/Color.h"
+  "/home/sejongtp07/ROS1_LIMO_PROJECT/kuLimo/catkin_ws/devel/include/turtlesim/Kill.h"
+  "/home/sejongtp07/ROS1_LIMO_PROJECT/kuLimo/catkin_ws/devel/include/turtlesim/Pose.h"
+  "/home/sejongtp07/ROS1_LIMO_PROJECT/kuLimo/catkin_ws/devel/include/turtlesim/SetPen.h"
+  "/home/sejongtp07/ROS1_LIMO_PROJECT/kuLimo/catkin_ws/devel/include/turtlesim/Spawn.h"
+  "/home/sejongtp07/ROS1_LIMO_PROJECT/kuLimo/catkin_ws/devel/include/turtlesim/TeleportAbsolute.h"
+  "/home/sejongtp07/ROS1_LIMO_PROJECT/kuLimo/catkin_ws/devel/include/turtlesim/TeleportRelative.h"
   "CMakeFiles/turtlesim_generate_messages_cpp"
 )
 

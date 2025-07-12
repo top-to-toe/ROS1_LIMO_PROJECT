@@ -225,13 +225,20 @@ struct Printer< ::hello_ros::AddTwoIntsRequest_<ContainerAllocator> >
 {
   template<typename Stream> static void stream(Stream& s, const std::string& indent, const ::hello_ros::AddTwoIntsRequest_<ContainerAllocator>& v)
   {
+    if (false || !indent.empty())
+      s << std::endl;
     s << indent << "head: ";
-    s << std::endl;
     Printer< ::std_msgs::Header_<ContainerAllocator> >::stream(s, indent + "  ", v.head);
+    if (true || !indent.empty())
+      s << std::endl;
     s << indent << "a: ";
     Printer<int64_t>::stream(s, indent + "  ", v.a);
+    if (true || !indent.empty())
+      s << std::endl;
     s << indent << "b: ";
     Printer<int64_t>::stream(s, indent + "  ", v.b);
+    if (true || !indent.empty())
+      s << std::endl;
     s << indent << "op: ";
     Printer<std::basic_string<char, std::char_traits<char>, typename std::allocator_traits<ContainerAllocator>::template rebind_alloc<char>>>::stream(s, indent + "  ", v.op);
   }

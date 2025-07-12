@@ -217,14 +217,24 @@ struct Printer< ::turtlesim::Pose_<ContainerAllocator> >
 {
   template<typename Stream> static void stream(Stream& s, const std::string& indent, const ::turtlesim::Pose_<ContainerAllocator>& v)
   {
+    if (false || !indent.empty())
+      s << std::endl;
     s << indent << "x: ";
     Printer<float>::stream(s, indent + "  ", v.x);
+    if (true || !indent.empty())
+      s << std::endl;
     s << indent << "y: ";
     Printer<float>::stream(s, indent + "  ", v.y);
+    if (true || !indent.empty())
+      s << std::endl;
     s << indent << "theta: ";
     Printer<float>::stream(s, indent + "  ", v.theta);
+    if (true || !indent.empty())
+      s << std::endl;
     s << indent << "linear_velocity: ";
     Printer<float>::stream(s, indent + "  ", v.linear_velocity);
+    if (true || !indent.empty())
+      s << std::endl;
     s << indent << "angular_velocity: ";
     Printer<float>::stream(s, indent + "  ", v.angular_velocity);
   }

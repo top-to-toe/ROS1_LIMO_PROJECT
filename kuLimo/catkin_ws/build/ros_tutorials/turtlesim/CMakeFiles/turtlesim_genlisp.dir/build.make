@@ -43,10 +43,10 @@ RM = /usr/bin/cmake -E remove -f
 EQUALS = =
 
 # The top-level source directory on which CMake was run.
-CMAKE_SOURCE_DIR = /home/sejongtp07/kuLimo/catkin_ws/src
+CMAKE_SOURCE_DIR = /home/sejongtp07/ROS1_LIMO_PROJECT/kuLimo/catkin_ws/src
 
 # The top-level build directory on which CMake was run.
-CMAKE_BINARY_DIR = /home/sejongtp07/kuLimo/catkin_ws/build
+CMAKE_BINARY_DIR = /home/sejongtp07/ROS1_LIMO_PROJECT/kuLimo/catkin_ws/build
 
 # Utility rule file for turtlesim_genlisp.
 
@@ -63,10 +63,10 @@ ros_tutorials/turtlesim/CMakeFiles/turtlesim_genlisp.dir/build: turtlesim_genlis
 .PHONY : ros_tutorials/turtlesim/CMakeFiles/turtlesim_genlisp.dir/build
 
 ros_tutorials/turtlesim/CMakeFiles/turtlesim_genlisp.dir/clean:
-	cd /home/sejongtp07/kuLimo/catkin_ws/build/ros_tutorials/turtlesim && $(CMAKE_COMMAND) -P CMakeFiles/turtlesim_genlisp.dir/cmake_clean.cmake
+	cd /home/sejongtp07/ROS1_LIMO_PROJECT/kuLimo/catkin_ws/build/ros_tutorials/turtlesim && $(CMAKE_COMMAND) -P CMakeFiles/turtlesim_genlisp.dir/cmake_clean.cmake
 .PHONY : ros_tutorials/turtlesim/CMakeFiles/turtlesim_genlisp.dir/clean
 
 ros_tutorials/turtlesim/CMakeFiles/turtlesim_genlisp.dir/depend:
-	cd /home/sejongtp07/kuLimo/catkin_ws/build && $(CMAKE_COMMAND) -E cmake_depends "Unix Makefiles" /home/sejongtp07/kuLimo/catkin_ws/src /home/sejongtp07/kuLimo/catkin_ws/src/ros_tutorials/turtlesim /home/sejongtp07/kuLimo/catkin_ws/build /home/sejongtp07/kuLimo/catkin_ws/build/ros_tutorials/turtlesim /home/sejongtp07/kuLimo/catkin_ws/build/ros_tutorials/turtlesim/CMakeFiles/turtlesim_genlisp.dir/DependInfo.cmake --color=$(COLOR)
+	cd /home/sejongtp07/ROS1_LIMO_PROJECT/kuLimo/catkin_ws/build && $(CMAKE_COMMAND) -E cmake_depends "Unix Makefiles" /home/sejongtp07/ROS1_LIMO_PROJECT/kuLimo/catkin_ws/src /home/sejongtp07/ROS1_LIMO_PROJECT/kuLimo/catkin_ws/src/ros_tutorials/turtlesim /home/sejongtp07/ROS1_LIMO_PROJECT/kuLimo/catkin_ws/build /home/sejongtp07/ROS1_LIMO_PROJECT/kuLimo/catkin_ws/build/ros_tutorials/turtlesim /home/sejongtp07/ROS1_LIMO_PROJECT/kuLimo/catkin_ws/build/ros_tutorials/turtlesim/CMakeFiles/turtlesim_genlisp.dir/DependInfo.cmake --color=$(COLOR)
 .PHONY : ros_tutorials/turtlesim/CMakeFiles/turtlesim_genlisp.dir/depend
 

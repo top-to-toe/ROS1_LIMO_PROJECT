@@ -1,6 +1,6 @@
 file(REMOVE_RECURSE
-  "/home/sejongtp07/kuLimo/catkin_ws/devel/lib/roscpp_tutorials/babbler"
-  "/home/sejongtp07/kuLimo/catkin_ws/devel/lib/roscpp_tutorials/babbler.pdb"
+  "/home/sejongtp07/ROS1_LIMO_PROJECT/kuLimo/catkin_ws/devel/lib/roscpp_tutorials/babbler"
+  "/home/sejongtp07/ROS1_LIMO_PROJECT/kuLimo/catkin_ws/devel/lib/roscpp_tutorials/babbler.pdb"
   "CMakeFiles/babbler.dir/babbler/babbler.cpp.o"
 )
 

@@ -6,5 +6,5 @@ CXX_FLAGS =
 
 CXX_DEFINES = -DROSCONSOLE_BACKEND_LOG4CXX -DROS_BUILD_SHARED_LIBS=1 -DROS_PACKAGE_NAME=\"roscpp_tutorials\"
 
-CXX_INCLUDES = -I/home/sejongtp07/kuLimo/catkin_ws/devel/include -I/opt/ros/noetic/include -I/opt/ros/noetic/share/xmlrpcpp/cmake/../../../include/xmlrpcpp 
+CXX_INCLUDES = -I/home/sejongtp07/ROS1_LIMO_PROJECT/kuLimo/catkin_ws/devel/include -I/opt/ros/noetic/include -I/opt/ros/noetic/share/xmlrpcpp/cmake/../../../include/xmlrpcpp 
 

@@ -4,5 +4,5 @@ PROJECT_PKG_CONFIG_INCLUDE_DIRS = "".split(';') if "" != "" else []
 PROJECT_CATKIN_DEPENDS = "".replace(';', ' ')
 PKG_CONFIG_LIBRARIES_WITH_PREFIX = "".split(';') if "" != "" else []
 PROJECT_NAME = "limo_application"
-PROJECT_SPACE_DIR = "/home/sejongtp07/kuLimo/catkin_ws/install"
+PROJECT_SPACE_DIR = "/home/sejongtp07/ROS1_LIMO_PROJECT/kuLimo/catkin_ws/install"
 PROJECT_VERSION = "0.0.0"

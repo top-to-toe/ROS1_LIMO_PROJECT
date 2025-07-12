@@ -1,6 +1,6 @@
 file(REMOVE_RECURSE
-  "/home/sejongtp07/kuLimo/catkin_ws/devel/lib/roscpp_tutorials/anonymous_listener"
-  "/home/sejongtp07/kuLimo/catkin_ws/devel/lib/roscpp_tutorials/anonymous_listener.pdb"
+  "/home/sejongtp07/ROS1_LIMO_PROJECT/kuLimo/catkin_ws/devel/lib/roscpp_tutorials/anonymous_listener"
+  "/home/sejongtp07/ROS1_LIMO_PROJECT/kuLimo/catkin_ws/devel/lib/roscpp_tutorials/anonymous_listener.pdb"
   "CMakeFiles/anonymous_listener.dir/anonymous_listener/anonymous_listener.cpp.o"
 )
 

@@ -1,8 +1,8 @@
-# Install script for directory: /home/sejongtp07/kuLimo/catkin_ws/src/basics
+# Install script for directory: /home/sejongtp07/ROS1_LIMO_PROJECT/kuLimo/catkin_ws/src/basics
 
 # Set the install prefix
 if(NOT DEFINED CMAKE_INSTALL_PREFIX)
-  set(CMAKE_INSTALL_PREFIX "/home/sejongtp07/kuLimo/catkin_ws/install")
+  set(CMAKE_INSTALL_PREFIX "/home/sejongtp07/ROS1_LIMO_PROJECT/kuLimo/catkin_ws/install")
 endif()
 string(REGEX REPLACE "/$" "" CMAKE_INSTALL_PREFIX "${CMAKE_INSTALL_PREFIX}")
 
@@ -38,17 +38,17 @@ if(NOT DEFINED CMAKE_CROSSCOMPILING)
 endif()
 
 if("x${CMAKE_INSTALL_COMPONENT}x" STREQUAL "xUnspecifiedx" OR NOT CMAKE_INSTALL_COMPONENT)
-  file(INSTALL DESTINATION "${CMAKE_INSTALL_PREFIX}/lib/pkgconfig" TYPE FILE FILES "/home/sejongtp07/kuLimo/catkin_ws/build/basics/catkin_generated/installspace/basics.pc")
+  file(INSTALL DESTINATION "${CMAKE_INSTALL_PREFIX}/lib/pkgconfig" TYPE FILE FILES "/home/sejongtp07/ROS1_LIMO_PROJECT/kuLimo/catkin_ws/build/basics/catkin_generated/installspace/basics.pc")
 endif()
 
 if("x${CMAKE_INSTALL_COMPONENT}x" STREQUAL "xUnspecifiedx" OR NOT CMAKE_INSTALL_COMPONENT)
   file(INSTALL DESTINATION "${CMAKE_INSTALL_PREFIX}/share/basics/cmake" TYPE FILE FILES
-    "/home/sejongtp07/kuLimo/catkin_ws/build/basics/catkin_generated/installspace/basicsConfig.cmake"
-    "/home/sejongtp07/kuLimo/catkin_ws/build/basics/catkin_generated/installspace/basicsConfig-version.cmake"
+    "/home/sejongtp07/ROS1_LIMO_PROJECT/kuLimo/catkin_ws/build/basics/catkin_generated/installspace/basicsConfig.cmake"
+    "/home/sejongtp07/ROS1_LIMO_PROJECT/kuLimo/catkin_ws/build/basics/catkin_generated/installspace/basicsConfig-version.cmake"
     )
 endif()
 
 if("x${CMAKE_INSTALL_COMPONENT}x" STREQUAL "xUnspecifiedx" OR NOT CMAKE_INSTALL_COMPONENT)
-  file(INSTALL DESTINATION "${CMAKE_INSTALL_PREFIX}/share/basics" TYPE FILE FILES "/home/sejongtp07/kuLimo/catkin_ws/src/basics/package.xml")
+  file(INSTALL DESTINATION "${CMAKE_INSTALL_PREFIX}/share/basics" TYPE FILE FILES "/home/sejongtp07/ROS1_LIMO_PROJECT/kuLimo/catkin_ws/src/basics/package.xml")
 endif()
 

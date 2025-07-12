@@ -22,6 +22,7 @@ def pose_cb(msg):
     sio.emit("pose", data)
 
 def odom_cb(msg):
+    print("odom test")
     data = {
         "linear": msg.twist.twist.linear.x,
         "angular": msg.twist.twist.angular.z
@@ -40,7 +41,22 @@ def path_cb(msg):
     sio.emit("path", {"points": poses})
 
 def lidar_cb(msg):
-    sio.emit("scan", {"ranges": list(msg.ranges)})
+    print("scan test")
+    # Check if SocketIO is connected before emitting
+    if sio.connected:
+        sio.emit("scan", {"ranges": list(msg.ranges)})
+    else:
+        print("SocketIO is not connected. Cannot emit scan data.")
+
+@sio.event
+def connect():
+    print("Successfully connected to the server")
+
+# Event handler to check when disconnected
+@sio.event
+def disconnect():
+    print("Disconnected from the server")
+
 
 if __name__ == '__main__':
     rospy.init_node("bridge_node")
@@ -50,6 +66,6 @@ if __name__ == '__main__':
     rospy.Subscriber("/battery_state", BatteryState, battery_cb)
     rospy.Subscriber("/camera/image/compressed", CompressedImage, image_cb)
     rospy.Subscriber("/move_base/GlobalPlanner/plan", Path, path_cb)
-    rospy.Subscriber("/scan", LaserScan, lidar_cb)
+    rospy.Subscriber("/limo/scan", LaserScan, lidar_cb)
 
     rospy.spin()

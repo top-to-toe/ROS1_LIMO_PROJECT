@@ -1,6 +1,6 @@
 file(REMOVE_RECURSE
-  "/home/sejongtp07/kuLimo/catkin_ws/devel/lib/limo_gazebo_sim/limo_skid_steer_controller"
-  "/home/sejongtp07/kuLimo/catkin_ws/devel/lib/limo_gazebo_sim/limo_skid_steer_controller.pdb"
+  "/home/sejongtp07/ROS1_LIMO_PROJECT/kuLimo/catkin_ws/devel/lib/limo_gazebo_sim/limo_skid_steer_controller"
+  "/home/sejongtp07/ROS1_LIMO_PROJECT/kuLimo/catkin_ws/devel/lib/limo_gazebo_sim/limo_skid_steer_controller.pdb"
   "CMakeFiles/limo_skid_steer_controller.dir/src/limo_skid_steer_controller.cpp.o"
 )
 

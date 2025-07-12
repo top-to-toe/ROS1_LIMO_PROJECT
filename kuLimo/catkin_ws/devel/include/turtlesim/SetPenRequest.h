@@ -216,14 +216,24 @@ struct Printer< ::turtlesim::SetPenRequest_<ContainerAllocator> >
 {
   template<typename Stream> static void stream(Stream& s, const std::string& indent, const ::turtlesim::SetPenRequest_<ContainerAllocator>& v)
   {
+    if (false || !indent.empty())
+      s << std::endl;
     s << indent << "r: ";
     Printer<uint8_t>::stream(s, indent + "  ", v.r);
+    if (true || !indent.empty())
+      s << std::endl;
     s << indent << "g: ";
     Printer<uint8_t>::stream(s, indent + "  ", v.g);
+    if (true || !indent.empty())
+      s << std::endl;
     s << indent << "b: ";
     Printer<uint8_t>::stream(s, indent + "  ", v.b);
+    if (true || !indent.empty())
+      s << std::endl;
     s << indent << "width: ";
     Printer<uint8_t>::stream(s, indent + "  ", v.width);
+    if (true || !indent.empty())
+      s << std::endl;
     s << indent << "off: ";
     Printer<uint8_t>::stream(s, indent + "  ", v.off);
   }

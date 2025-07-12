@@ -192,8 +192,12 @@ struct Printer< ::turtlesim::TeleportRelativeRequest_<ContainerAllocator> >
 {
   template<typename Stream> static void stream(Stream& s, const std::string& indent, const ::turtlesim::TeleportRelativeRequest_<ContainerAllocator>& v)
   {
+    if (false || !indent.empty())
+      s << std::endl;
     s << indent << "linear: ";
     Printer<float>::stream(s, indent + "  ", v.linear);
+    if (true || !indent.empty())
+      s << std::endl;
     s << indent << "angular: ";
     Printer<float>::stream(s, indent + "  ", v.angular);
   }

@@ -185,6 +185,8 @@ struct Printer< ::rospy_tutorials::BadTwoIntsResponse_<ContainerAllocator> >
 {
   template<typename Stream> static void stream(Stream& s, const std::string& indent, const ::rospy_tutorials::BadTwoIntsResponse_<ContainerAllocator>& v)
   {
+    if (false || !indent.empty())
+      s << std::endl;
     s << indent << "sum: ";
     Printer<int32_t>::stream(s, indent + "  ", v.sum);
   }

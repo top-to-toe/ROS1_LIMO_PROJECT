@@ -308,14 +308,17 @@ struct Printer< ::hello_ros::TimeWaitAction_<ContainerAllocator> >
 {
   template<typename Stream> static void stream(Stream& s, const std::string& indent, const ::hello_ros::TimeWaitAction_<ContainerAllocator>& v)
   {
+    if (false || !indent.empty())
+      s << std::endl;
     s << indent << "action_goal: ";
-    s << std::endl;
     Printer< ::hello_ros::TimeWaitActionGoal_<ContainerAllocator> >::stream(s, indent + "  ", v.action_goal);
+    if (true || !indent.empty())
+      s << std::endl;
     s << indent << "action_result: ";
-    s << std::endl;
     Printer< ::hello_ros::TimeWaitActionResult_<ContainerAllocator> >::stream(s, indent + "  ", v.action_result);
+    if (true || !indent.empty())
+      s << std::endl;
     s << indent << "action_feedback: ";
-    s << std::endl;
     Printer< ::hello_ros::TimeWaitActionFeedback_<ContainerAllocator> >::stream(s, indent + "  ", v.action_feedback);
   }
 };
