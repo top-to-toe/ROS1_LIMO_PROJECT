@@ -1,1 +1,3 @@
 kuLimo/catkin_ws/src/turtlebot3_simulations
+build/
+devel/
