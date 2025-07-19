@@ -69,6 +69,7 @@ catkin_install_python(PROGRAMS
   scripts/circle_limo
   scripts/patrol_limo
   scripts/patrol_line_limo
+  scripts/fireDetector_limo
   DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION}
 )
 

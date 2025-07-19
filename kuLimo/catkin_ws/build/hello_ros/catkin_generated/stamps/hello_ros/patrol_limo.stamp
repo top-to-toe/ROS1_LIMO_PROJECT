@@ -19,20 +19,34 @@ class PatrolNode:
 
         # 액션 서버 연결 대기
         rospy.loginfo("move_base 액션 서버 연결 대기 중...")
+        # 5초 동안 move_base 액션 서버 연결 대기
         if not self.client.wait_for_server(rospy.Duration(5.0)): # type: ignore
-            rospy.logerr("move_base 액션 서버를 찾을 수 없습니다!")
-            rospy.signal_shutdown("액션 서버 연결 실패")
-            return
+            rospy.logerr("move_base 액션 서버를 찾을 수 없습니다! 내비게이션 스택이 실행 중인지 확인하세요.")
+            self.move_base_available = False # move_base 사용 가능 여부 플래그
+            rospy.logwarn("move_base 서버가 없으므로 패트롤 기능은 비활성화됩니다.")
+        else:
+            self.move_base_available = True
+            rospy.loginfo("move_base 액션 서버 연결 완료.")
 
         # 패트롤 지점과 방향 (x, y, yaw(도 단위))
         self.patrol_points = [(-1.1, -3.09, -0.00137), (-3.37, -4.23, -0.00137), (-6.55, -0.138, -0.00137), (-7.7, 1.6, -0.00137), (-6.87, 5.61, -0.00143), (-0.00951, 12.1, -0.00143)] 
         self.patrol_index = 0
         self.is_goal_active = False  # 목표 활성화 상태 추적
 
-        # 패트롤 시작
-        self.patrol()
+        # move_base 서버가 연결되었을 때만 패트롤 시작
+        if self.move_base_available:
+            self.patrol()
+        else:
+            rospy.loginfo("move_base 서버를 기다리는 중. 수동으로 시작해 주세요.")
+
 
     def go_to_pose(self, x, y, yaw_deg):
+        # move_base 서버가 연결되어 있지 않으면 이동하지 않음
+        if not self.move_base_available:
+            rospy.logwarn("move_base 서버가 연결되지 않아 목표를 전송할 수 없습니다.")
+            self.trigger_next_patrol_point() # 다음 지점으로 넘어가도록 처리
+            return
+
         if self.is_goal_active:
             rospy.logwarn("이전 목표가 아직 활성화 상태입니다. 새 목표 전송을 대기합니다.")
             return
@@ -46,45 +60,87 @@ class PatrolNode:
         goal.target_pose.pose.position = Point(x=x, y=y, z=0.0)
 
         # yaw(도)를 쿼터니언으로 변환
-        yaw_rad = math.radians(yaw_deg)
+        yaw_rad = math.radians(yaw_deg) 
         q = quaternion_from_euler(0, 0, yaw_rad)
         goal.target_pose.pose.orientation = Quaternion(*q)
 
         # 목표 전송
-        rospy.loginfo(f"목표 전송: x={x}, y={y}, yaw={yaw_deg}도")
+        rospy.loginfo(f"목표 전송: x={x}, y={y}, yaw={yaw_deg}도 (인덱스: {self.patrol_index})")
         self.is_goal_active = True
+        
+        # 콜백 함수 지정하여 목표 전송
         self.client.send_goal(goal, done_cb=self.done_callback, feedback_cb=self.feedback_callback)
+        
+        # 1분 (60초) 이내에 목표에 도달했는지 확인 (여기서 타임아웃 처리)
+        # 이 시간 안에 도달하지 못하면 다음 지점으로 넘어갑니다.
+        finished_within_time = self.client.wait_for_result(rospy.Duration(60.0)) 
+
+        if not finished_within_time:
+            # 타임아웃 발생! 목표 취소하고 다음 지점으로 이동
+            self.client.cancel_goal()
+            rospy.logwarn(f"목표 ({x}, {y}) 도달 시간 초과 (90초). 현재 지점에서 다음 지점으로 넘어갑니다.")
+            self.is_goal_active = False # 목표 상태 비활성화
+            self.trigger_next_patrol_point() # 타임아웃 시에도 다음 지점으로 넘어가도록 처리
+        else:
+            # 타임아웃 없이 결과가 나왔을 경우 done_callback에서 처리
+            pass
+
 
     def feedback_callback(self, feedback):
-        # 피드백 로그 (디버깅용, 선택 사항)
-        # rospy.loginfo("피드백: move_base 현재 위치")
         pass
 
     def done_callback(self, state, result):
-        # 중복 done 콜백 방지
+        # 중복 done 콜백 방지 및 이미 타임아웃으로 처리된 경우 무시
         if not self.is_goal_active:
-            rospy.logwarn("비활성화된 목표에 대한 done 콜백 수신, 무시합니다.")
+            rospy.logwarn("비활성화된 목표에 대한 done 콜백 수신 또는 이미 타임아웃 처리됨, 무시합니다.")
             return
+
+        self.is_goal_active = False # 목표 상태를 비활성화
 
         # 목표 성공 여부 확인
         if state == actionlib.GoalStatus.SUCCEEDED:
             rospy.loginfo("목표에 성공적으로 도달했습니다!")
-            self.is_goal_active = False
-            # 다음 패트롤 지점으로 이동
-            self.patrol_index += 1
-            if self.patrol_index >= len(self.patrol_points):
-                self.patrol_index = 0
-            rospy.Timer(rospy.Duration(2.0), self.timer_callback, oneshot=True) # type: ignore
         else:
-            rospy.logwarn("목표 실패, 상태: %s" % state)
-            self.is_goal_active = False
+            # 목표 실패 시에도 노드를 종료하지 않고 다음 목표로 이동
+            rospy.logwarn(f"목표 실패! 현재 지점 ({self.patrol_points[self.patrol_index][0]}, {self.patrol_points[self.patrol_index][1]}) 도달 실패, 다음 지점으로 넘어갑니다. 상태: {state}")
+            
+        # 성공/실패와 관계없이 다음 지점 처리 (타임아웃이 아닌 경우만)
+        # 타임아웃으로 이미 trigger_next_patrol_point가 호출되었을 수 있으므로 이중 호출 방지
+        # 여기서는 done_callback이 호출된 경우에만 다음 지점으로 넘어가도록 합니다.
+        # 즉, wait_for_result가 True를 반환했을 때만 이 done_callback이 의미있게 동작합니다.
+        self.trigger_next_patrol_point()
+
+
+    def trigger_next_patrol_point(self):
+        # 노드 종료 중이면 더 이상 진행하지 않음
+        if rospy.is_shutdown():
+            return
+
+        # 다음 패트롤 지점으로 인덱스 업데이트
+        self.patrol_index += 1
+        if self.patrol_index >= len(self.patrol_points):
+            self.patrol_index = 0 # 모든 지점을 돌았으면 처음으로 돌아감
+
+        # 다음 목표 전송을 위한 타이머 설정 (2초 후)
+        rospy.Timer(rospy.Duration(2.0), self.timer_callback, oneshot=True) # type: ignore
+
     def timer_callback(self, event):
         # 타이머 콜백에서 다음 목표로 이동
-        self.patrol()
+        # 이전에 전송된 목표가 완료된 상태인지 확인 (중복 전송 방지)
+        if not self.is_goal_active:
+            self.patrol()
+        else:
+            rospy.logwarn("이전 목표가 아직 활성화 중이므로 다음 목표 전송을 건너뜁니다.")
+
 
     def patrol(self):
         # 노드 종료 시 종료
         if rospy.is_shutdown():
+            return
+
+        # move_base 서버가 연결되어 있지 않으면 패트롤 중단
+        if not self.move_base_available:
+            rospy.logwarn("move_base 서버가 연결되지 않아 패트롤을 시작할 수 없습니다.")
             return
 
         # 다음 패트롤 지점 가져오기

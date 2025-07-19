@@ -1,5 +1,12 @@
-<launch>
+<launch>    
+    <!-- <node pkg="sound_play" type="soundplay_node.py" name="soundplay_node" output="screen"/>
+
+    <node pkg="hello_ros" type="fireDetector_limo" name="fire_detector" output="screen">
+        <param name="~alarm_sound" value="/home/sejongtp07/fire_alarm.wav"/> 
+    </node> -->
+ 
     <node name="patrol_limo" pkg="hello_ros" type="patrol_limo" output="screen"/>
+
     <!-- <group ns="robot1">
         <arg name="robot_name" value="robot1" />
 

@@ -1,0 +1,121 @@
+#!/usr/bin/env python
+import rospy
+import cv2
+import time
+import os
+from sensor_msgs.msg import Image
+from geometry_msgs.msg import Twist
+from cv_bridge import CvBridge
+
+from std_msgs.msg import Bool 
+
+class FireDetector:
+    def __init__(self):
+        rospy.init_node('fire_detector', anonymous=True)
+        self.bridge = CvBridge()
+
+        self.ns = rospy.get_namespace()
+        if self.ns == '/':
+            self.ns = ''
+
+        # ✅ 경고음 파일 경로를 LIMO 로봇의 실제 경로로 설정해주세요.
+        self.alarm_sound = "/home/sejongtp08/fire_alarm.wav" 
+
+        self.last_alarm_time = 0
+        self.alarm_interval = 5
+
+        self.image_sub = rospy.Subscriber(self.ns + "camera/rgb/image_raw", Image, self.callback)
+        self.fire_alert_pub = rospy.Publisher(self.ns + "fire_alert", Bool, queue_size=1)
+        self.is_fire_detected = False
+
+        rospy.loginfo(f"[{self.ns.strip('/')}] 화재 감지 노드 초기화 완료.")
+
+    def play_alarm(self):
+        """
+        3초 동안 경고음 재생.
+        알람 파일이 존재하지 않으면 경고 메시지만 출력하고 재생하지 않습니다.
+        """
+        if not os.path.exists(self.alarm_sound): # 파일 존재 여부 확인
+            rospy.logerr(f"[{self.ns.strip('/')}] 경고음 파일이 존재하지 않습니다: {self.alarm_sound}")
+            return # 파일이 없으면 함수 종료
+
+        cmd = f"timeout 3s aplay {self.alarm_sound} &"
+        os.system(cmd)
+        rospy.loginfo(f"[{self.ns.strip('/')}] 경고음 재생 중: {self.alarm_sound}")
+
+    def callback(self, data):
+        frame = self.bridge.imgmsg_to_cv2(data, desired_encoding="bgr8")
+        hsv = cv2.cvtColor(frame, cv2.COLOR_BGR2HSV)
+
+        lower_red1 = (0, 150, 180)
+        upper_red1 = (10, 255, 255)
+        lower_red2 = (160, 150, 180)
+        upper_red2 = (180, 255, 255)
+        lower_orange_yellow = (10, 180, 200)
+        upper_orange_yellow = (45, 255, 255)
+
+        mask_red1 = cv2.inRange(hsv, lower_red1, upper_red1)
+        mask_red2 = cv2.inRange(hsv, lower_red2, upper_red2)
+        mask_orange_yellow = cv2.inRange(hsv, lower_orange_yellow, upper_orange_yellow)
+        mask = cv2.bitwise_or(mask_red1, mask_red2)
+        mask = cv2.bitwise_or(mask, mask_orange_yellow)
+
+        kernel = cv2.getStructuringElement(cv2.MORPH_RECT, (5, 5))
+        mask = cv2.morphologyEx(mask, cv2.MORPH_OPEN, kernel)
+        mask = cv2.morphologyEx(mask, cv2.MORPH_DILATE, kernel)
+
+        contours, _ = cv2.findContours(mask, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+        
+        current_frame_fire_detected = False 
+
+        for cnt in contours:
+            area = cv2.contourArea(cnt)
+            if area < 3000:
+                continue
+
+            x, y, w, h = cv2.boundingRect(cnt)
+            aspect_ratio = float(w) / h
+
+            if 0.9 < aspect_ratio < 1.1:
+                continue
+
+            roi_mask = mask[y:y+h, x:x+w]
+            fire_pixels = cv2.countNonZero(roi_mask)
+            roi_total = w * h
+            fire_ratio = fire_pixels / float(roi_total)
+
+            if fire_ratio < 0.1:
+                continue
+
+            current_frame_fire_detected = True
+            cv2.rectangle(frame, (x, y), (x + w, y + h), (0, 0, 255), 3)
+            cv2.putText(frame, "FIRE DETECTED!", (x, y - 10),
+                        cv2.FONT_HERSHEY_SIMPLEX, 1.0, (0, 0, 255), 3)
+            rospy.logwarn(f"[{self.ns.strip('/')}] [FIRE] DETECTED at x={x}, y={y}, area={area}, ratio={fire_ratio:.2f}")
+
+        if current_frame_fire_detected and not self.is_fire_detected:
+            self.is_fire_detected = True
+            rospy.logwarn(f"[{self.ns.strip('/')}] 🔴 화재 감지! patrol_node에 정지 요청.")
+            self.fire_alert_pub.publish(Bool(True))
+            
+            if (time.time() - self.last_alarm_time > self.alarm_interval):
+                self.last_alarm_time = time.time()
+                self.play_alarm()
+
+        elif not current_frame_fire_detected and self.is_fire_detected:
+            self.is_fire_detected = False
+            rospy.loginfo(f"[{self.ns.strip('/')}] 🟢 화재 감지 해제. patrol_node에 재출발 요청.")
+            self.fire_alert_pub.publish(Bool(False))
+
+
+        cv2.imshow(f"[{self.ns.strip('/')}] Fire Detection", frame)
+        cv2.imshow(f"[{self.ns.strip('/')}] Fire Mask", mask)
+        cv2.waitKey(1)
+
+if __name__ == '__main__':
+    try:
+        FireDetector()
+        rospy.spin()
+    except rospy.ROSInterruptException:
+        pass
+    cv2.destroyAllWindows()
