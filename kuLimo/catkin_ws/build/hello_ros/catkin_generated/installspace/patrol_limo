@@ -71,14 +71,14 @@ class PatrolNode:
         # 콜백 함수 지정하여 목표 전송
         self.client.send_goal(goal, done_cb=self.done_callback, feedback_cb=self.feedback_callback)
         
-        # 15초 이내에 목표에 도달했는지 확인 (여기서 타임아웃 처리)
+        # 60초 이내에 목표에 도달했는지 확인 (여기서 타임아웃 처리)
         # 이 시간 안에 도달하지 못하면 다음 지점으로 넘어갑니다.
-        finished_within_time = self.client.wait_for_result(rospy.Duration(15.0)) 
+        finished_within_time = self.client.wait_for_result(rospy.Duration(60.0)) 
 
         if not finished_within_time:
             # 타임아웃 발생! 목표 취소하고 다음 지점으로 이동
             self.client.cancel_goal()
-            rospy.logwarn(f"목표 ({x}, {y}) 도달 시간 초과 (15초). 현재 지점에서 다음 지점으로 넘어갑니다.")
+            rospy.logwarn(f"목표 ({x}, {y}) 도달 시간 초과 (60초). 현재 지점에서 다음 지점으로 넘어갑니다.")
             self.is_goal_active = False # 목표 상태 비활성화
             self.trigger_next_patrol_point() # 타임아웃 시에도 다음 지점으로 넘어가도록 처리
         else:
