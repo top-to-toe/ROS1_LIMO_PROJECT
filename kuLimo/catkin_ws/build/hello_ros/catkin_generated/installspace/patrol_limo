@@ -1,162 +1,786 @@
 #!/usr/bin/env python3
 
-import math
-
-import actionlib
 import rospy
-from geometry_msgs.msg import Point, Pose, Quaternion
-from move_base_msgs.msg import MoveBaseAction, MoveBaseGoal
-from tf.transformations import quaternion_from_euler
+import math
+import time
+import numpy as np
+from geometry_msgs.msg import Point, Quaternion, Twist, PoseStamped
+from move_base_msgs.msg import MoveBaseGoal, MoveBaseAction
+from tf.transformations import quaternion_from_euler, euler_from_quaternion
+from actionlib import SimpleActionClient
+from nav_msgs.msg import Odometry
+from sensor_msgs.msg import LaserScan
+from std_msgs.msg import Bool
 
-
-class PatrolNode:
+class ObstacleAvoidancePatrol:
     def __init__(self):
-        # ROS 노드 초기화
-        rospy.init_node('patrol_node', anonymous=True)
+        rospy.init_node('patrol_node')
 
-        # move_base 액션 클라이언트 생성
-        self.client = actionlib.SimpleActionClient('move_base', MoveBaseAction)
-
-        # 액션 서버 연결 대기
-        rospy.loginfo("move_base 액션 서버 연결 대기 중...")
-        # 5초 동안 move_base 액션 서버 연결 대기
-        if not self.client.wait_for_server(rospy.Duration(5.0)): # type: ignore
-            rospy.logerr("move_base 액션 서버를 찾을 수 없습니다! 내비게이션 스택이 실행 중인지 확인하세요.")
-            self.move_base_available = False # move_base 사용 가능 여부 플래그
-            rospy.logwarn("move_base 서버가 없으므로 패트롤 기능은 비활성화됩니다.")
-        else:
-            self.move_base_available = True
-            rospy.loginfo("move_base 액션 서버 연결 완료.")
-
-        # 패트롤 지점과 방향 (x, y, yaw(도 단위))
-        self.patrol_points = [(-1.1, -3.09, -0.00137), (-3.37, -4.23, -0.00137), (-6.55, -0.138, -0.00137), (-7.7, 1.6, -0.00137), (-6.87, 5.61, -0.00143), (-0.00951, 12.1, -0.00143)] 
+        # LIMO 특화 설정
+        self.robot_type = rospy.get_param('~robot_type', 'diff')
+        self.use_natural_movement = rospy.get_param('~use_natural_movement', True)
+        
+        # 패트롤 지점들
+        # UPDATED: Applying the provided patrol points
+        self.patrol_points = [
+            {'x': -1.1, 'y': -3.09, 'yaw': -0.00137},
+            {'x': -3.37, 'y': -4.23, 'yaw': -0.00137},
+            {'x': -6.55, 'y': -0.138, 'yaw': -0.00137},
+            {'x': -7.7, 'y': 1.6, 'yaw': -0.00137},
+            {'x': -6.87, 'y': 5.61, 'yaw': -0.00143},
+            {'x': -0.00951, 'y': 12.1, 'yaw': -0.00143}
+        ]
+        
+        self.move_base_available = False
+        self.is_goal_active = False # UPDATED: Renamed to avoid direct conflict, consistency with your note
         self.patrol_index = 0
-        self.is_goal_active = False  # 목표 활성화 상태 추적
-
-        # move_base 서버가 연결되었을 때만 패트롤 시작
+        self.patrol_enabled = True
+        
+        # 장애물 회피 관련 변수
+        self.laser_data = None
+        self.last_laser_time = rospy.Time.now()
+        self.obstacle_detected = False
+        self.avoidance_active = False
+        self.stuck_counter = 0
+        self.last_position = None
+        self.position_history = []
+        
+        # 장애물 회피 파라미터 (민감도 완화)
+        self.safe_distance = rospy.get_param('~safe_distance', 0.8)  # 안전 거리 (m) - 증가
+        self.critical_distance = rospy.get_param('~critical_distance', 0.4)  # 긴급 정지 거리 (m) - 증가
+        self.avoidance_angle_step = rospy.get_param('~avoidance_angle_step', 30.0)  # 회피 각도 단위 (도)
+        self.max_avoidance_attempts = rospy.get_param('~max_avoidance_attempts', 8)  # 최대 회피 시도 횟수
+        self.stuck_threshold = rospy.get_param('~stuck_threshold', 8)  # 정체 감지 임계값 - 증가
+        self.recovery_distance = rospy.get_param('~recovery_distance', 1.0)  # 복구 이동 거리
+        
+        # 장애물 감지 안정성을 위한 필터링 파라미터
+        self.obstacle_detection_count = 0
+        self.obstacle_detection_threshold = rospy.get_param('~obstacle_detection_threshold', 3)  # 연속 3회 감지시 확정
+        self.clear_detection_threshold = rospy.get_param('~clear_detection_threshold', 2)  # 연속 2회 클리어시 해제
+        self.min_obstacle_points = rospy.get_param('~min_obstacle_points', 5)  # 최소 장애물 포인트 수
+        self.laser_angle_range = rospy.get_param('~laser_angle_range', 60.0)  # 레이저 감지 각도 범위 (도)
+        
+        # move_base 클라이언트 초기화
+        self.client = SimpleActionClient('move_base', MoveBaseAction)
+        rospy.loginfo("move_base 서버 연결 대기중...")
+        self.move_base_available = self.client.wait_for_server(timeout=rospy.Duration(10.0))
+        
         if self.move_base_available:
-            self.patrol()
+            rospy.loginfo("move_base 서버 연결 성공!")
         else:
-            rospy.loginfo("move_base 서버를 기다리는 중. 수동으로 시작해 주세요.")
+            rospy.logwarn("move_base 서버 연결 실패. 자연스러운 움직임만 사용합니다.")
+        
+        # LIMO 차량 모드에 따른 파라미터 조정
+        if self.robot_type == 'ackermann':
+            self.max_linear_speed = rospy.get_param('~max_linear_speed', 0.4)
+            self.max_angular_speed = rospy.get_param('~max_angular_speed', 0.6)
+            self.min_turn_radius = 0.5
+        elif self.robot_type == 'omni':
+            self.max_linear_speed = rospy.get_param('~max_linear_speed', 0.3)
+            self.max_angular_speed = rospy.get_param('~max_angular_speed', 0.8)
+        else:
+            self.max_linear_speed = rospy.get_param('~max_linear_speed', 0.5)
+            self.max_angular_speed = rospy.get_param('~max_angular_speed', 0.8)
+        
+        self.acceleration = rospy.get_param('~acceleration', 0.2)
+        self.deceleration = rospy.get_param('~deceleration', 0.3)
+        self.turn_threshold = rospy.get_param('~turn_threshold', 15.0)
+        self.position_tolerance = rospy.get_param('~position_tolerance', 0.15)
+        self.angle_tolerance = rospy.get_param('~angle_tolerance', 8.0)
+        
+        # 현재 상태 추적
+        self.current_pose = None
+        self.current_velocity = Twist()
+        self.target_pose = None
+        self.last_odom_time = rospy.Time.now()
+        
+        # ROS 퍼블리셔/서브스크라이버
+        self.cmd_vel_pub = rospy.Publisher('/cmd_vel', Twist, queue_size=1)
+        self.odom_sub = rospy.Subscriber('/odom', Odometry, self.odom_callback)
+        self.laser_sub = rospy.Subscriber('/scan', LaserScan, self.laser_callback)
+        
+        # 패트롤 제어용
+        self.patrol_enable_sub = rospy.Subscriber('/patrol_enable', Bool, self.patrol_enable_callback)
+        self.patrol_status_pub = rospy.Publisher('/patrol_status', Bool, queue_size=1)
+        self.obstacle_status_pub = rospy.Publisher('/obstacle_detected', Bool, queue_size=1)
+        
+        # 패트롤 시작 타이머 (UPDATED: Ensure it starts even without explicit /patrol_enable message initially)
+        # This timer now waits for a short duration to allow all subscribers to connect and then starts the patrol.
+        self.patrol_timer = rospy.Timer(rospy.Duration(2.0), self.start_patrol, oneshot=True)
+        
+        # 정체 감지 타이머
+        self.stuck_check_timer = rospy.Timer(rospy.Duration(1.0), self.check_if_stuck)
+        
+        rospy.loginfo(f"장애물 회피 패트롤 노드 초기화 완료 - 모드: {self.robot_type}")
 
+    def laser_callback(self, msg):
+        """레이저 스캔 데이터 콜백"""
+        self.laser_data = msg
+        self.last_laser_time = rospy.Time.now()
+        self.detect_obstacles()
+
+    def detect_obstacles(self):
+        """개선된 장애물 감지 (노이즈 필터링 포함)"""
+        if self.laser_data is None:
+            return
+        
+        # 레이저 데이터 전처리
+        ranges = np.array(self.laser_data.ranges)
+        angle_min = self.laser_data.angle_min
+        angle_increment = self.laser_data.angle_increment
+        
+        # 무한대, NaN, 0 값 처리
+        valid_ranges = np.where(
+            np.logical_and(
+                np.isfinite(ranges), 
+                np.logical_and(ranges > 0.1, ranges < 5.0)  # 유효 범위: 0.1m ~ 10m
+            ), 
+            ranges, 
+            np.inf
+        )
+        
+        # 전방 감지 각도 범위 계산 (기본 60도, 설정 가능)
+        front_angle_range = math.radians(self.laser_angle_range)  # 60도 -> 라디안
+        total_angles = len(valid_ranges)
+        center_index = total_angles // 2
+        front_indices = int(front_angle_range / angle_increment)
+        
+        start_idx = max(0, center_index - front_indices)
+        end_idx = min(total_angles, center_index + front_indices)
+        
+        front_ranges = valid_ranges[start_idx:end_idx]
+        
+        # 장애물 감지 - 최소 포인트 수 조건 추가
+        critical_points = np.sum(front_ranges < self.critical_distance)
+        safe_points = np.sum(front_ranges < self.safe_distance)
+        
+        # 연속적인 장애물 포인트 확인 (노이즈 제거)
+        critical_detected = critical_points >= self.min_obstacle_points
+        safe_detected = safe_points >= self.min_obstacle_points
+        
+        # 장애물 감지 상태 필터링
+        if safe_detected:
+            self.obstacle_detection_count += 1
+        else:
+            if self.obstacle_detection_count > 0:
+                self.obstacle_detection_count -= 1
+        
+        # 임계값 이상에서만 장애물로 확정
+        previous_obstacle_state = self.obstacle_detected
+        
+        if self.obstacle_detection_count >= self.obstacle_detection_threshold:
+            self.obstacle_detected = True
+        elif self.obstacle_detection_count <= self.clear_detection_threshold:
+            self.obstacle_detected = False
+        
+        # 상태 변화시에만 로그 출력
+        if previous_obstacle_state != self.obstacle_detected:
+            if self.obstacle_detected:
+                rospy.loginfo(f"장애물 감지 확정: 안전거리 내 포인트 {safe_points}개")
+            else:
+                rospy.loginfo("장애물 해제 확정")
+        
+        # 장애물 상태 발행
+        self.obstacle_status_pub.publish(Bool(data=self.obstacle_detected))
+        
+        # 긴급 정지는 더 엄격한 조건으로
+        if critical_detected and critical_points >= self.min_obstacle_points * 2 and not self.avoidance_active:
+            rospy.logwarn(f"긴급 장애물 감지! 포인트 수: {critical_points}")
+            self.emergency_stop()
+
+    def emergency_stop(self):
+        """긴급 정지"""
+        cmd = Twist()
+        for _ in range(5):  # 확실한 정지를 위해 여러 번 전송
+            self.cmd_vel_pub.publish(cmd)
+            rospy.sleep(0.1)
+        rospy.logwarn("긴급 정지 완료")
+
+    def find_safe_direction(self):
+        """개선된 안전한 방향 찾기"""
+        if self.laser_data is None:
+            return None
+        
+        ranges = np.array(self.laser_data.ranges)
+        ranges = np.where(
+            np.logical_and(np.isfinite(ranges), ranges > 0.1), 
+            ranges, 
+            np.inf
+        )
+        
+        angle_min = self.laser_data.angle_min
+        angle_increment = self.laser_data.angle_increment
+        
+        best_direction = None
+        max_clearance = 0
+        
+        # 더 넓은 범위의 안전 구간 찾기
+        safety_margin = self.safe_distance * 1.0  # 안전 마진 증가
+        
+        for i in range(self.max_avoidance_attempts):
+            # 좌우로 번갈아가며 검사 (각도 간격 증가)
+            if i % 2 == 0:
+                test_angle = (i // 2) * math.radians(self.avoidance_angle_step)
+            else:
+                test_angle = -(i // 2 + 1) * math.radians(self.avoidance_angle_step)
+            
+            # 해당 각도의 레이저 인덱스 계산
+            laser_index = int((test_angle - angle_min) / angle_increment)
+            
+            if 0 <= laser_index < len(ranges):
+                # 더 넓은 범위의 평균 거리 계산 (노이즈 감소)
+                window_size = 15  # 윈도우 크기 증가
+                start_idx = max(0, laser_index - window_size)
+                end_idx = min(len(ranges), laser_index + window_size)
+                
+                # 유효한 값들만 사용하여 평균 계산
+                window_ranges = ranges[start_idx:end_idx]
+                valid_ranges = window_ranges[window_ranges < 10.0]  # 10m 이하만 유효
+                
+                if len(valid_ranges) > 0:
+                    avg_distance = np.mean(valid_ranges)
+                    min_distance = np.min(valid_ranges)
+                    
+                    # 평균 거리와 최소 거리 모두 고려
+                    if (avg_distance > safety_margin and 
+                        min_distance > self.safe_distance and 
+                        avg_distance > max_clearance):
+                        max_clearance = avg_distance
+                        best_direction = test_angle
+                        rospy.logdebug(f"안전 방향 후보: {math.degrees(test_angle):.1f}도, "
+                                     f"평균거리: {avg_distance:.2f}m, 최소거리: {min_distance:.2f}m")
+        
+        if best_direction is not None:
+            rospy.loginfo(f"최적 안전 방향: {math.degrees(best_direction):.1f}도, "
+                         f"여유거리: {max_clearance:.2f}m")
+        
+        return best_direction
+
+    def avoid_obstacle(self):
+        """장애물 회피 동작"""
+        if not self.obstacle_detected:
+            return True
+        
+        rospy.loginfo("장애물 회피 시작")
+        self.avoidance_active = True
+        
+        # 안전한 방향 찾기
+        safe_direction = self.find_safe_direction()
+        
+        if safe_direction is None:
+            rospy.logwarn("안전한 방향을 찾을 수 없습니다. 후진을 시도합니다.")
+            return self.recovery_behavior()
+        
+        rospy.loginfo(f"안전한 방향 발견: {math.degrees(safe_direction):.1f}도")
+        
+        # 안전한 방향으로 회전
+        current_yaw = self.get_current_yaw()
+        target_yaw = current_yaw + safe_direction
+        
+        success = self.smooth_rotation(math.degrees(target_yaw), max_duration=8.0)
+        if not success:
+            self.avoidance_active = False
+            return False
+        
+        # 안전한 방향으로 조금 이동
+        if self.is_odom_valid():
+            current_x = self.current_pose.position.x
+            current_y = self.current_pose.position.y
+            
+            # 1미터 전진
+            move_distance = 1.0
+            target_x = current_x + move_distance * math.cos(target_yaw)
+            target_y = current_y + move_distance * math.sin(target_yaw)
+            
+            success = self.smooth_linear_movement_with_avoidance(target_x, target_y, max_duration=15.0)
+        
+        self.avoidance_active = False
+        rospy.loginfo("장애물 회피 완료")
+        return success
+
+    def recovery_behavior(self):
+        """복구 동작 (후진 등)"""
+        rospy.loginfo("복구 동작 시작 - 후진합니다.")
+        
+        # 후진
+        cmd = Twist()
+        cmd.linear.x = -0.2  # 천천히 후진
+        
+        start_time = time.time()
+        while time.time() - start_time < 3.0:  # 3초간 후진
+            if not self.patrol_enabled:
+                break
+                
+            # 후진 중에도 장애물 체크
+            if self.laser_data is not None:
+                ranges = np.array(self.laser_data.ranges)
+                ranges = np.where(np.isfinite(ranges), ranges, np.inf)
+                
+                # 후방 체크 (180도 반대편)
+                rear_ranges = ranges[len(ranges)//4:3*len(ranges)//4]
+                if np.any(rear_ranges < self.critical_distance):
+                    rospy.logwarn("후방에도 장애물 감지! 정지합니다.")
+                    break
+            
+            self.cmd_vel_pub.publish(cmd)
+            rospy.sleep(0.1)
+        
+        self.stop_robot()
+        
+        # 180도 회전 시도
+        current_yaw = self.get_current_yaw()
+        target_yaw_deg = math.degrees(current_yaw) + 180
+        if target_yaw_deg > 180:
+            target_yaw_deg -= 360
+        
+        rospy.loginfo("180도 회전을 시도합니다.")
+        return self.smooth_rotation(target_yaw_deg, max_duration=10.0)
+
+    def check_if_stuck(self, event):
+        """정체 상태 확인"""
+        if not self.patrol_enabled or not self.is_goal_active:
+            self.stuck_counter = 0
+            return
+        
+        if not self.is_odom_valid():
+            return
+        
+        current_pos = [self.current_pose.position.x, self.current_pose.position.y]
+        
+        # 위치 히스토리 업데이트
+        self.position_history.append(current_pos)
+        if len(self.position_history) > 10:  # 최근 10초간의 위치만 유지
+            self.position_history.pop(0)
+        
+        # 이동 거리 계산
+        if len(self.position_history) >= 5:  # 5초 이상의 데이터가 있을 때
+            old_pos = self.position_history[0]
+            movement = self.calculate_distance(old_pos[0], old_pos[1], current_pos[0], current_pos[1])
+            
+            # 5초간 0.2m 미만 이동시 정체로 판단
+            if movement < 0.2:
+                self.stuck_counter += 1
+                if self.stuck_counter >= self.stuck_threshold:
+                    rospy.logwarn(f"로봇이 정체되었습니다. (카운터: {self.stuck_counter})")
+                    self.handle_stuck_situation()
+            else:
+                self.stuck_counter = 0
+
+    def handle_stuck_situation(self):
+        """정체 상황 처리"""
+        rospy.logwarn("정체 상황 해결을 시도합니다.")
+        self.stuck_counter = 0
+        
+        # 현재 목표 취소
+        if self.move_base_available:
+            self.client.cancel_all_goals()
+        
+        # 복구 동작 수행
+        if self.recovery_behavior():
+            rospy.loginfo("정체 상황 해결 성공")
+            # 잠시 대기 후 현재 목표 재시도
+            rospy.sleep(2.0)
+        else:
+            rospy.logwarn("정체 상황 해결 실패 - 다음 지점으로 넘어갑니다.")
+            self.trigger_next_patrol_point()
+
+    def smooth_linear_movement_with_avoidance(self, target_x, target_y, max_duration=40.0):
+        """개선된 장애물 회피 직선 움직임"""
+        if not self.patrol_enabled:
+            return False
+            
+        rospy.loginfo(f"회피 기능 포함 직선 이동: ({target_x}, {target_y})")
+        
+        start_time = time.time()
+        current_speed = 0.0
+        consecutive_obstacle_count = 0
+        no_obstacle_count = 0
+        
+        while time.time() - start_time < max_duration and self.patrol_enabled:
+            if not self.is_odom_valid():
+                rospy.sleep(0.1)
+                continue
+            
+            # 장애물 감지 안정성 개선
+            if self.obstacle_detected and not self.avoidance_active:
+                consecutive_obstacle_count += 1
+                no_obstacle_count = 0
+                
+                # 더 엄격한 조건으로 회피 시작 (5회 연속 감지)
+                if consecutive_obstacle_count >= 5:
+                    rospy.loginfo("지속적인 장애물 감지 - 회피를 시도합니다.")
+                    if not self.avoid_obstacle():
+                        rospy.logwarn("장애물 회피 실패")
+                        return False
+                    consecutive_obstacle_count = 0
+                    continue
+                else:
+                    # 장애물이 감지되면 속도만 줄이고 계속 진행
+                    rospy.logdebug(f"장애물 감지 중... ({consecutive_obstacle_count}/5)")
+            else:
+                no_obstacle_count += 1
+                if no_obstacle_count >= 3:  # 3회 연속 클리어되면 카운터 리셋
+                    consecutive_obstacle_count = 0
+                    no_obstacle_count = 0
+            
+            # 현재 위치
+            current_x = self.current_pose.position.x
+            current_y = self.current_pose.position.y
+            
+            # 목표까지의 거리
+            distance = self.calculate_distance(current_x, current_y, target_x, target_y)
+            
+            # 목표에 충분히 가까우면 완료
+            if distance < self.position_tolerance:
+                self.stop_robot()
+                rospy.loginfo("회피 기능 포함 직선 이동 완료")
+                return True
+            
+            # 목표 방향 계산
+            target_angle = math.atan2(target_y - current_y, target_x - current_x)
+            current_yaw = self.get_current_yaw()
+            angle_diff = self.calculate_angle_difference(target_angle, current_yaw)
+            
+            # 장애물 거리에 따른 속도 조절 (더 부드럽게)
+            speed_factor = 1.0
+            if self.laser_data is not None:
+                ranges = np.array(self.laser_data.ranges)
+                ranges = np.where(np.isfinite(ranges), ranges, np.inf)
+                
+                # 전방 범위의 최소 거리 계산
+                center_idx = len(ranges) // 2
+                front_range = ranges[center_idx-30:center_idx+30]  # 더 넓은 범위
+                front_min_distance = np.min(front_range)
+                
+                # 거리별 속도 조절 (더 완만한 곡선)
+                if front_min_distance < self.safe_distance * 2:
+                    speed_factor = max(0.2, 
+                                     0.5 + 0.5 * (front_min_distance / (self.safe_distance * 2)))
+                
+                # 장애물이 감지된 상태에서는 더욱 천천히
+                if consecutive_obstacle_count > 0:
+                    speed_factor = min(speed_factor, 0.3)
+            
+            # 기본 속도 계산
+            base_speed = self.max_linear_speed * speed_factor
+            
+            if distance > 1.5:
+                target_speed = min(base_speed, current_speed + self.acceleration * 0.1)
+            else:
+                target_speed = max(0.1,
+                                 min(base_speed * (distance / 1.5),
+                                     current_speed - self.deceleration * 0.1))
+            
+            current_speed = target_speed
+            
+            # 방향 조정 (더 부드럽게)
+            angular_correction = 0.0
+            if abs(math.degrees(angle_diff)) > 10.0:  # 임계각 증가
+                if self.robot_type == 'ackermann':
+                    max_steer = self.max_angular_speed * 0.3  # 더 부드러운 조향
+                    angular_correction = max(-max_steer, min(max_steer, angle_diff * 1.0))
+                else:
+                    angular_correction = max(-self.max_angular_speed * 0.3,
+                                           min(self.max_angular_speed * 0.3,
+                                               angle_diff * 1.5))
+            
+            # 속도 명령 전송
+            cmd = Twist()
+            cmd.linear.x = current_speed
+            cmd.angular.z = angular_correction
+            self.cmd_vel_pub.publish(cmd)
+            
+            # 디버그 정보 (너무 자주 출력하지 않도록)
+            if int(time.time() * 2) % 10 == 0:  # 5초마다
+                rospy.logdebug(f"이동 중: 거리={distance:.2f}m, 속도={current_speed:.2f}m/s, "
+                             f"장애물카운트={consecutive_obstacle_count}")
+            
+            rospy.sleep(0.1)
+        
+        self.stop_robot()
+        if not self.patrol_enabled:
+            return False
+            
+        rospy.logwarn("회피 기능 포함 직선 이동 타임아웃")
+        return False
+
+    def patrol_enable_callback(self, msg):
+        """패트롤 활성화/비활성화"""
+        self.patrol_enabled = msg.data
+        if not self.patrol_enabled:
+            self.stop_robot()
+            if self.move_base_available:
+                self.client.cancel_all_goals()
+            rospy.loginfo("패트롤 중지됨")
+        else:
+            rospy.loginfo("패트롤 재시작됨")
+            # If patrol is re-enabled, ensure it resumes from the current patrol point
+            self.go_to_next_point()
+
+
+    def start_patrol(self, event):
+        """패트롤 시작"""
+        if len(self.patrol_points) == 0:
+            rospy.logwarn("패트롤 지점이 설정되지 않았습니다.")
+            return
+            
+        rospy.loginfo("장애물 회피 패트롤 시작!")
+        # Ensure the robot immediately tries to go to the first patrol point upon startup
+        self.go_to_next_point()
+
+    def go_to_next_point(self):
+        """다음 패트롤 지점으로 이동"""
+        if not self.patrol_enabled:
+            return
+            
+        point = self.patrol_points[self.patrol_index % len(self.patrol_points)]
+        rospy.loginfo(f"패트롤 지점 {self.patrol_index + 1}/{len(self.patrol_points)}로 이동: "
+                     f"({point['x']:.2f}, {point['y']:.2f}, {point['yaw']:.1f}°)")
+        
+        self.go_to_pose(point['x'], point['y'], point['yaw'])
+
+    def odom_callback(self, msg):
+        """오도메트리 콜백"""
+        self.current_pose = msg.pose.pose
+        self.current_velocity = msg.twist.twist
+        self.last_odom_time = rospy.Time.now()
+
+    def is_odom_valid(self):
+        """오도메트리 데이터 유효성 검사"""
+        if self.current_pose is None:
+            return False
+        time_diff = (rospy.Time.now() - self.last_odom_time).to_sec()
+        return time_diff < 5.0
+
+    def calculate_distance(self, x1, y1, x2, y2):
+        """두 점 사이의 거리 계산"""
+        return math.sqrt((x2 - x1)**2 + (y2 - y1)**2)
+
+    def calculate_angle_difference(self, target_yaw, current_yaw):
+        """두 각도 간의 차이 계산"""
+        diff = target_yaw - current_yaw
+        while diff > math.pi:
+            diff -= 2 * math.pi
+        while diff < -math.pi:
+            diff += 2 * math.pi
+        return diff
+
+    def get_current_yaw(self):
+        """현재 yaw 각도 가져오기"""
+        if not self.is_odom_valid():
+            return 0.0
+        orientation = self.current_pose.orientation
+        _, _, yaw = euler_from_quaternion([orientation.x, orientation.y, 
+                                          orientation.z, orientation.w])
+        return yaw
+
+    def smooth_rotation(self, target_yaw_deg, max_duration=15.0):
+        """부드러운 회전 (장애물 감지 포함)"""
+        if not self.patrol_enabled:
+            return False
+            
+        rospy.loginfo(f"부드러운 회전 시작: 목표 {target_yaw_deg}도")
+        
+        target_yaw = math.radians(target_yaw_deg)
+        start_time = time.time()
+        
+        while time.time() - start_time < max_duration and self.patrol_enabled:
+            if not self.is_odom_valid():
+                rospy.sleep(0.1)
+                continue
+            
+            # 회전 중 긴급 장애물 체크
+            if self.laser_data is not None:
+                ranges = np.array(self.laser_data.ranges)
+                ranges = np.where(np.isfinite(ranges), ranges, np.inf)
+                if np.any(ranges < self.critical_distance):
+                    rospy.logwarn("회전 중 긴급 장애물 감지!")
+                    self.emergency_stop()
+                    return False
+                
+            current_yaw = self.get_current_yaw()
+            angle_diff = self.calculate_angle_difference(target_yaw, current_yaw)
+            
+            if abs(math.degrees(angle_diff)) < self.angle_tolerance:
+                self.stop_robot()
+                rospy.loginfo("회전 완료")
+                return True
+            
+            # 속도 계산
+            if self.robot_type == 'ackermann':
+                angular_speed = min(self.max_angular_speed * 0.7, abs(angle_diff) * 1.5)
+            else:
+                angular_speed = min(self.max_angular_speed, abs(angle_diff) * 2.0)
+            
+            angular_speed = angular_speed if angle_diff > 0 else -angular_speed
+            
+            cmd = Twist()
+            cmd.angular.z = angular_speed
+            self.cmd_vel_pub.publish(cmd)
+            
+            rospy.sleep(0.1)
+        
+        self.stop_robot()
+        return not (not self.patrol_enabled)
+
+    def stop_robot(self):
+        """로봇 정지"""
+        cmd = Twist()
+        self.cmd_vel_pub.publish(cmd)
+        rospy.sleep(0.3)
+
+    def approach_with_curve(self, target_x, target_y, target_yaw_deg):
+        """곡선 경로로 자연스럽게 접근 (장애물 회피 포함)"""
+        if not self.is_odom_valid():
+            rospy.logwarn("현재 위치를 알 수 없습니다.")
+            return False
+            
+        current_x = self.current_pose.position.x
+        current_y = self.current_pose.position.y
+        current_yaw = self.get_current_yaw()
+        
+        distance = self.calculate_distance(current_x, current_y, target_x, target_y)
+        target_direction = math.atan2(target_y - current_y, target_x - current_x)
+        direction_diff = self.calculate_angle_difference(target_direction, current_yaw)
+        
+        rospy.loginfo(f"장애물 회피 곡선 접근: 거리={distance:.2f}m, 방향차이={math.degrees(direction_diff):.1f}도")
+        
+        # 큰 방향 전환 필요시 사전 회전
+        if abs(math.degrees(direction_diff)) > self.turn_threshold:
+            rospy.loginfo("큰 방향 전환 필요 - 사전 회전 수행")
+            if not self.smooth_rotation(math.degrees(target_direction)):
+                return False
+        
+        # 장애물 회피 기능이 포함된 곡선 이동
+        success = self.smooth_linear_movement_with_avoidance(target_x, target_y)
+        if not success:
+            return False
+        
+        # 최종 방향 조정
+        final_yaw_diff = abs(math.degrees(self.calculate_angle_difference(
+            math.radians(target_yaw_deg), self.get_current_yaw())))
+        
+        if final_yaw_diff > self.angle_tolerance:
+            rospy.loginfo("최종 방향 조정 수행")
+            return self.smooth_rotation(target_yaw_deg)
+        
+        return True
 
     def go_to_pose(self, x, y, yaw_deg):
-        # move_base 서버가 연결되어 있지 않으면 이동하지 않음
-        if not self.move_base_available:
-            rospy.logwarn("move_base 서버가 연결되지 않아 목표를 전송할 수 없습니다.")
-            self.trigger_next_patrol_point() # 다음 지점으로 넘어가도록 처리
+        """장애물 회피가 포함된 목표 위치 이동"""
+        if not self.patrol_enabled:
             return
-
+            
         if self.is_goal_active:
-            rospy.logwarn("이전 목표가 아직 활성화 상태입니다. 새 목표 전송을 대기합니다.")
+            rospy.logwarn("이전 목표가 아직 활성화 상태입니다.")
             return
 
-        # MoveBaseGoal 생성
+        rospy.loginfo(f"장애물 회피 목표 이동: x={x}, y={y}, yaw={yaw_deg}도")
+        self.is_goal_active = True
+        self.stuck_counter = 0
+        self.position_history.clear()
+        
+        self.patrol_status_pub.publish(Bool(data=True))
+        
+        success = False
+        
+        # 자연스러운 움직임 시도 (장애물 회피 포함)
+        if self.use_natural_movement and self.is_odom_valid():
+            rospy.loginfo("장애물 회피 자연스러운 움직임으로 이동")
+            start_time = time.time()
+            success = self.approach_with_curve(x, y, yaw_deg)
+            elapsed_time = time.time() - start_time
+            
+            if success:
+                rospy.loginfo(f"장애물 회피 이동 성공! 소요시간: {elapsed_time:.1f}초")
+            else:
+                rospy.logwarn("장애물 회피 자연스러운 이동 실패")
+        
+        # move_base 백업 사용 (장애물 회피 설정 포함)
+        if not success and self.move_base_available:
+            rospy.loginfo("move_base로 장애물 회피 대체 이동")
+            success = self.fallback_to_move_base(x, y, yaw_deg)
+        
+        self.is_goal_active = False
+        
+        if success:
+            rospy.sleep(2.0)
+            self.trigger_next_patrol_point()
+        else:
+            rospy.logwarn("목표 도달 실패 - 다음 지점으로 넘어갑니다.")
+            rospy.sleep(1.0)
+            self.trigger_next_patrol_point()
+
+    def fallback_to_move_base(self, x, y, yaw_deg):
+        """move_base를 이용한 백업 이동"""
+        if not self.move_base_available:
+            return False
+            
         goal = MoveBaseGoal()
         goal.target_pose.header.frame_id = "map"
         goal.target_pose.header.stamp = rospy.Time.now()
-
-        # 위치 설정
         goal.target_pose.pose.position = Point(x=x, y=y, z=0.0)
 
-        # yaw(도)를 쿼터니언으로 변환
         yaw_rad = math.radians(yaw_deg) 
         q = quaternion_from_euler(0, 0, yaw_rad)
         goal.target_pose.pose.orientation = Quaternion(*q)
 
-        # 목표 전송
-        rospy.loginfo(f"목표 전송: x={x}, y={y}, yaw={yaw_deg}도 (인덱스: {self.patrol_index})")
-        self.is_goal_active = True
+        rospy.loginfo(f"move_base 목표 전송: x={x}, y={y}, yaw={yaw_deg}도")
         
-        # 콜백 함수 지정하여 목표 전송
-        self.client.send_goal(goal, done_cb=self.done_callback, feedback_cb=self.feedback_callback)
+        self.client.send_goal(goal)
         
-        # 60초 이내에 목표에 도달했는지 확인 (여기서 타임아웃 처리)
-        # 이 시간 안에 도달하지 못하면 다음 지점으로 넘어갑니다.
-        finished_within_time = self.client.wait_for_result(rospy.Duration(60.0)) 
-
-        if not finished_within_time:
-            # 타임아웃 발생! 목표 취소하고 다음 지점으로 이동
-            self.client.cancel_goal()
-            rospy.logwarn(f"목표 ({x}, {y}) 도달 시간 초과 (60초). 현재 지점에서 다음 지점으로 넘어갑니다.")
-            self.is_goal_active = False # 목표 상태 비활성화
-            self.trigger_next_patrol_point() # 타임아웃 시에도 다음 지점으로 넘어가도록 처리
-        else:
-            # 타임아웃 없이 결과가 나왔을 경우 done_callback에서 처리
-            pass
-
-
-    def feedback_callback(self, feedback):
-        pass
-
-    def done_callback(self, state, result):
-        # 중복 done 콜백 방지 및 이미 타임아웃으로 처리된 경우 무시
-        if not self.is_goal_active:
-            rospy.logwarn("비활성화된 목표에 대한 done 콜백 수신 또는 이미 타임아웃 처리됨, 무시합니다.")
-            return
-
-        self.is_goal_active = False # 목표 상태를 비활성화
-
-        # 목표 성공 여부 확인
-        if state == actionlib.GoalStatus.SUCCEEDED:
-            rospy.loginfo("목표에 성공적으로 도달했습니다!")
-        else:
-            # 목표 실패 시에도 노드를 종료하지 않고 다음 목표로 이동
-            rospy.logwarn(f"목표 실패! 현재 지점 ({self.patrol_points[self.patrol_index][0]}, {self.patrol_points[self.patrol_index][1]}) 도달 실패, 다음 지점으로 넘어갑니다. 상태: {state}")
+        # move_base 실행 중 장애물 모니터링
+        result_received = False
+        check_interval = 0.5  # 0.5초마다 체크
+        timeout = 60.0
+        elapsed_time = 0.0
+        
+        while elapsed_time < timeout and not result_received and self.patrol_enabled:
+            # 결과 확인
+            if self.client.wait_for_result(timeout=rospy.Duration(check_interval)):
+                result_received = True
+                state = self.client.get_state()
+                if state == 3:  # SUCCEEDED
+                    rospy.loginfo("move_base 이동 성공!")
+                    return True
+                else:
+                    rospy.logwarn(f"move_base 이동 실패: state={state}")
+                    return False
             
-        # 성공/실패와 관계없이 다음 지점 처리 (타임아웃이 아닌 경우만)
-        # 타임아웃으로 이미 trigger_next_patrol_point가 호출되었을 수 있으므로 이중 호출 방지
-        # 여기서는 done_callback이 호출된 경우에만 다음 지점으로 넘어가도록 합니다.
-        # 즉, wait_for_result가 True를 반환했을 때만 이 done_callback이 의미있게 동작합니다.
-        self.trigger_next_patrol_point()
-
+            elapsed_time += check_interval
+            
+            # 진행상황 로그
+            if int(elapsed_time) % 10 == 0:  # 10초마다
+                rospy.loginfo(f"move_base 이동 진행 중... ({elapsed_time:.0f}초 경과)")
+        
+        if not result_received:
+            rospy.logwarn("move_base 타임아웃")
+            self.client.cancel_goal()
+        
+        return False
 
     def trigger_next_patrol_point(self):
-        # 노드 종료 중이면 더 이상 진행하지 않음
-        if rospy.is_shutdown():
+        """다음 순찰 지점으로 이동"""
+        if not self.patrol_enabled:
             return
-
-        # 다음 패트롤 지점으로 인덱스 업데이트
-        self.patrol_index += 1
-        if self.patrol_index >= len(self.patrol_points):
-            self.patrol_index = 0 # 모든 지점을 돌았으면 처음으로 돌아감
-
-        # 다음 목표 전송을 위한 타이머 설정 (2초 후)
-        rospy.Timer(rospy.Duration(2.0), self.timer_callback, oneshot=True) # type: ignore
-
-    def timer_callback(self, event):
-        # 타이머 콜백에서 다음 목표로 이동
-        # 이전에 전송된 목표가 완료된 상태인지 확인 (중복 전송 방지)
-        if not self.is_goal_active:
-            self.patrol()
-        else:
-            rospy.logwarn("이전 목표가 아직 활성화 중이므로 다음 목표 전송을 건너뜁니다.")
-
-
-    def patrol(self):
-        # 노드 종료 시 종료
-        if rospy.is_shutdown():
-            return
-
-        # move_base 서버가 연결되어 있지 않으면 패트롤 중단
-        if not self.move_base_available:
-            rospy.logwarn("move_base 서버가 연결되지 않아 패트롤을 시작할 수 없습니다.")
-            return
-
-        # 다음 패트롤 지점 가져오기
-        x, y, yaw = self.patrol_points[self.patrol_index]
-        self.go_to_pose(x, y, yaw)
-
-    def shutdown(self):
-        rospy.loginfo("패트롤 노드 종료")
-        self.client.cancel_all_goals()
+            
+        self.patrol_index = (self.patrol_index + 1) % len(self.patrol_points)
+        rospy.loginfo(f"다음 순찰 지점: {self.patrol_index + 1}/{len(self.patrol_points)}")
+        
+        self.patrol_status_pub.publish(Bool(data=False))
+        
+        # 3초 후 다음 지점으로 이동
+        rospy.Timer(rospy.Duration(3.0), lambda event: self.go_to_next_point(), oneshot=True)
 
 def main():
     try:
-        patrol_node = PatrolNode()
+        patrol_node = ObstacleAvoidancePatrol()
+        rospy.loginfo("LIMO 장애물 회피 패트롤 노드 실행 중...")
         rospy.spin()
     except rospy.ROSInterruptException:
-        rospy.loginfo("패트롤 노드 종료됨.")
+        rospy.loginfo("LIMO 장애물 회피 패트롤 노드 종료됨.")
+    except Exception as e:
+        rospy.logerr(f"패트롤 노드 오류: {e}")
 
 if __name__ == '__main__':
     main()

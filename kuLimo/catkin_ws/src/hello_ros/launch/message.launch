@@ -1,4 +1,0 @@
-<launch>
-    <node name="hello" pkg="hello_ros" type="hello" output="screen"/>
-    <node name="move_turtle" pkg="hello_ros" type="moveTurtle" output="screen"/>
-</launch>

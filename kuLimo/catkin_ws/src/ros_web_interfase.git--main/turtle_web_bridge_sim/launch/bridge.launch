@@ -1,5 +1,12 @@
 <launch>
-    <node name="bridge_node" pkg="turtle_web_bridge_sim" type="bridge_node.py" output="screen">
-        <!-- <param name="use_sim_time" value="true"/> -->
-    </node>
+    <!-- 시뮬레이션 시간을 사용하도록 설정 -->
+    <param name="use_sim_time" value="true"/>
+
+    <!-- 1. 가상 로봇 데이터 발행 노드 (추가된 부분) -->
+    <!-- 이 노드가 가짜 위치, 속도, 센서 데이터를 생성하여 발행합니다. -->
+    <!-- <node pkg="turtle_web_bridge_sim" type="dummy_robot_publisher.py" name="dummy_robot_publisher" output="screen" /> -->
+
+    <!-- 2. ROS-웹 소켓 브리지 노드 -->
+    <!-- 위 노드가 발행한 데이터를 받아 웹 서버로 전달합니다. -->
+    <node pkg="turtle_web_bridge_sim" type="bridge_node_fps.py" name="bridge_node_fps" output="screen" />
 </launch>

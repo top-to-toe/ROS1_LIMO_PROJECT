@@ -65,6 +65,17 @@
   <exec_depend>dynamic_reconfigure</exec_depend>
   <build_depend>darknet_ros_msgs</build_depend>
   <exec_depend>darknet_ros_msgs</exec_depend>
+  <!-- 새로 넣은것  -->
+  <build_depend>actionlib</build_depend>
+  <exec_depend>actionlib</exec_depend>
+  <build_depend>nav_msgs</build_depend>
+  <exec_depend>nav_msgs</exec_depend>
+  <build_depend>move_base_msgs</build_depend>
+  <exec_depend>move_base_msgs</exec_depend>
+  <build_depend>tf</build_depend>
+  <exec_depend>tf</exec_depend>
+  <build_depend>std_msgs</build_depend>
+  <exec_depend>std_msgs</exec_depend>
 
 
   <!-- The export tag contains other, unspecified, tags -->

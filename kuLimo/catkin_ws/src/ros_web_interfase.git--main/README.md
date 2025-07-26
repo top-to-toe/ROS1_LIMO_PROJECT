@@ -115,6 +115,7 @@ source ~/catkin_ws/src/web_interface/config/ros_multi_machine.env
 3. LIMO의 핵심 노드를 실행합니다.
 
 ```bash
+roslaunch web_interface ros_web_interfase.git--main minimal_limo.launch
 roslaunch web_interface turtle_web_bridge_limo/launch/minimal_limo.launch
 ```
 
@@ -129,3 +130,35 @@ http://<노트북_IP>:8000
 
 웹 페이지에서 LIMO 로봇의 실시간 정보를 확인할 수 있습니다.
 
+
+
+
+roscore
+
+roslaunch limo_gazebo_sim limo_worlds.launch
+
+roslaunch limo_bringup limo_navigation_diff_simul.launch
+
+1
+roslaunch limo_bringup limo_teletop_keyboard_simul.launch
+
+2
+roslaunch limo_bringup limo_navigation_diff_simul.launch
+
+
+
+source 
+uvicorn app.main:app --host 0.0.0.0 --port 8000
+
+roslaunch turtle_web_bridge_sim bridge.launch   
+
+
+
+rostopic list | grep camera
+rostopic echo /camera/image/compressed
+
+
+카메라 포트 노출
+- rtsp > stream > 
+  > rtsp code > html create
+  > notice > streamer df

@@ -23,6 +23,9 @@ app = socketio.ASGIApp(
 # uvicorn 실행 위치(web_server)를 기준으로 'static' 폴더를 찾습니다.
 fastapi_app.mount("/static", StaticFiles(directory="static"), name="static")
 
+# HLS 스트림만 별도 경로로 서빙
+fastapi_app.mount("/hls", StaticFiles(directory="/var/www/html"), name="hls")
+
 # 4. 루트 경로('/') 요청 시 HTML 파일을 안정적으로 반환하도록 수정합니다.
 # open().read() 대신 FileResponse를 사용하는 것이 표준적인 방법입니다.
 @fastapi_app.get("/")
@@ -41,3 +44,7 @@ fastapi_app.add_middleware(
 
 
 # uvicorn app.main:app --host 0.0.0.0 --port 8000
+
+if __name__ == "__main__":
+    import uvicorn
+    uvicorn.run("app.main:app", host="0.0.0.0", port=8000, reload=True)

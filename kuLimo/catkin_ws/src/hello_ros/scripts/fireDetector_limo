@@ -47,6 +47,8 @@ class FireDetector:
         frame = self.bridge.imgmsg_to_cv2(data, desired_encoding="bgr8")
         hsv = cv2.cvtColor(frame, cv2.COLOR_BGR2HSV)
 
+        rospy.loginfo(f"[{self.ns.strip('/')}] 화재 감지 콜백 호출됨!!!!!!!!!!!!!!!!!!!!!")
+
         lower_red1 = (0, 150, 180)
         upper_red1 = (10, 255, 255)
         lower_red2 = (160, 150, 180)

@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -11,35 +12,52 @@
             margin: 0;
             padding: 20px;
         }
+
         .container {
             display: flex;
             flex-direction: column;
             gap: 20px;
         }
+
         .data-section {
             padding: 15px;
             border: 1px solid #ccc;
             border-radius: 5px;
             background-color: #fff;
         }
+
         .title {
             font-size: 1.5rem;
             margin-bottom: 10px;
         }
+
         #camera-feed {
             width: 100%;
-            height: 300px;
+            max-width: 640px;
+            margin: 0 auto;
             background-color: #000;
             display: flex;
-            justify-content: center;
+            flex-direction: column;
             align-items: center;
+            justify-content: center;
+            border-radius: 8px;
+            overflow: hidden;
+        }
+
+        #camera-image {
+            width: 100%;
+            height: auto;
+            display: block;
+            object-fit: contain;
+            background: #000;
         }
     </style>
 </head>
+
 <body>
 
     <h1>Robot Data Display</h1>
-    
+
     <div class="container">
         <div id="pose" class="data-section">
             <div class="title">Pose</div>
@@ -56,12 +74,37 @@
 
         <div id="battery" class="data-section">
             <div class="title">Battery Status</div>
-            <p><strong>Battery Percentage:</strong> <span id="battery-percentage">N/A</span>%</p>
+            <p>
+                <strong>Battery:</strong>
+                <progress id="battery-bar" value="0" max="100"></progress>
+                <span id="battery-percentage">N/A</span>%
+            </p>
+            <p>
+                <strong>Voltage:</strong>
+                <span id="battery-voltage">N/A</span> V
+            </p>
         </div>
 
         <div id="camera-feed" class="data-section">
-            <div class="title">Camera Feed</div>
-            <img id="camera-image" src="" alt="Camera feed not available" />
+            <h2>My Robot's Camera (H.264 실시간 스트림)</h2>
+            <video width="640" height="480" controls autoplay muted>
+                <source src="http://192.168.175.134:8080/stream?topic=/limo/color/image_raw&type=h264" type="video/mp4">
+                브라우저가 비디오 태그를 지원하지 않습니다.
+            </video>
+        </div>
+
+        <!-- 제어 버튼 UI를 카메라 아래로 이동 -->
+        <div id="control" class="data-section">
+            <div class="title">LIMO Control</div>
+            <div style="display: flex; flex-direction: column; align-items: center; gap: 8px;">
+                <button onmousedown="sendCmd('forward')" onmouseup="sendCmd('stop')">앞으로</button>
+                <div>
+                    <button onmousedown="sendCmd('left')" onmouseup="sendCmd('stop')">좌</button>
+                    <button onmousedown="sendCmd('stop')">정지</button>
+                    <button onmousedown="sendCmd('right')" onmouseup="sendCmd('stop')">우</button>
+                </div>
+                <button onmousedown="sendCmd('backward')" onmouseup="sendCmd('stop')">뒤로</button>
+            </div>
         </div>
 
         <div id="path" class="data-section">
@@ -71,31 +114,52 @@
 
         <div id="scan" class="data-section">
             <div class="title">Lidar Scan</div>
-            <pre id="scan-data">No scan data available</pre>
+            <canvas id="scan-canvas" width="400" height="400" style="background:#222;"></canvas>
         </div>
     </div>
 
     <!-- Include the Socket.IO client library -->
     <script src="https://cdn.socket.io/4.0.0/socket.io.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/hls.js@latest"></script>
     <script>
         const socket = io('http://localhost:8000'); // Connect to FastAPI server
+        // 제어 명령 전송 함수
+        function sendCmd(direction) {
+            socket.emit('cmd', { direction });
+        }
 
         // Listen for pose update
         socket.on('pose_update', (data) => {
-            document.getElementById('pose-x').innerText = data.x || 'N/A';
-            document.getElementById('pose-y').innerText = data.y || 'N/A';
-            document.getElementById('pose-theta').innerText = data.theta || 'N/A';
+            console.log('[DEBUG] pose_update:', data);
+            document.getElementById('pose-x').innerText = (typeof data.x !== 'undefined') ? data.x : 'N/A';
+            document.getElementById('pose-y').innerText = (typeof data.y !== 'undefined') ? data.y : 'N/A';
+            document.getElementById('pose-theta').innerText = (typeof data.theta !== 'undefined') ? data.theta : 'N/A';
         });
 
         // Listen for velocity update
         socket.on('velocity_update', (data) => {
-            document.getElementById('velocity-linear').innerText = data.linear || 'N/A';
-            document.getElementById('velocity-angular').innerText = data.angular || 'N/A';
+            console.log('[DEBUG] velocity_update:', data);
+            document.getElementById('velocity-linear').innerText = (typeof data.linear !== 'undefined') ? data.linear : 'N/A';
+            document.getElementById('velocity-angular').innerText = (typeof data.angular !== 'undefined') ? data.angular : 'N/A';
         });
 
         // Listen for battery update
         socket.on('battery_update', (data) => {
-            document.getElementById('battery-percentage').innerText = data.percentage || 'N/A';
+            console.log('[DEBUG] battery_update:', data);
+            const percent = (typeof data.percentage !== 'undefined') ? data.percentage : 0;
+            const voltage = (typeof data.voltage !== 'undefined') ? data.voltage : 'N/A';
+            document.getElementById('battery-bar').value = percent;
+            document.getElementById('battery-percentage').innerText = percent;
+            document.getElementById('battery-voltage').innerText = voltage;
+            // 색상 동적 변경
+            const bar = document.getElementById('battery-bar');
+            if (percent > 50) {
+                bar.style.setProperty('accent-color', 'green');
+            } else if (percent > 20) {
+                bar.style.setProperty('accent-color', 'orange');
+            } else {
+                bar.style.setProperty('accent-color', 'red');
+            }
         });
 
         // Listen for camera feed update
@@ -111,9 +175,49 @@
 
         // Listen for lidar scan update
         socket.on('scan_update', (data) => {
-            document.getElementById('scan-data').innerText = JSON.stringify(data.ranges, null, 2);
+            const ranges = data.ranges ?? [];
+            const angle_min = data.angle_min ?? 0;
+            const angle_increment = data.angle_increment ?? 0.01;
+            const canvas = document.getElementById('scan-canvas');
+            const ctx = canvas.getContext('2d');
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            // 중심점
+            const cx = canvas.width / 2;
+            const cy = canvas.height / 2;
+            const scale = 50; // 1m = 50px
+            ctx.save();
+            ctx.translate(cx, cy);
+            ctx.strokeStyle = 'lime';
+            ctx.beginPath();
+            for (let i = 0; i < ranges.length; i++) {
+                const r = ranges[i];
+                const angle = angle_min + i * angle_increment;
+                const x = r * Math.cos(angle) * scale;
+                const y = r * Math.sin(angle) * scale;
+                if (i === 0) {
+                    ctx.moveTo(x, y);
+                } else {
+                    ctx.lineTo(x, y);
+                }
+            }
+            ctx.stroke();
+            ctx.restore();
         });
+
+        // HLS.js로 RTSP(H.264) → HLS 스트림 재생
+        if (window.Hls && Hls.isSupported()) {
+            var video = document.getElementById('camera-video');
+            var hls = new Hls();
+            hls.loadSource('http://localhost:8000/static/stream.m3u8');
+            hls.attachMedia(video);
+        } else {
+            var video = document.getElementById('camera-video');
+            if (video.canPlayType('application/vnd.apple.mpegurl')) {
+                video.src = 'http://localhost:8000/static/stream.m3u8';
+            }
+        }
     </script>
 
 </body>
+
 </html>

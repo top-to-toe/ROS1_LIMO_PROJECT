@@ -5,7 +5,23 @@
         <param name="~alarm_sound" value="/home/sejongtp07/fire_alarm.wav"/> 
     </node> -->
  
-    <node name="patrol_limo" pkg="hello_ros" type="patrol_limo" output="screen"/>
+    <!-- <node name="patrol_limo" pkg="hello_ros" type="patrol_limo" output="screen"/> -->
+    <!-- <node name="fireDetector_limo" pkg="hello_ros" type="fireDetector_limo" output="screen"/> -->
+    <node name="traffic_monitor" pkg="hello_ros" type="traffic_monitor" output="screen"/>
+    <node name="patrol_limo" pkg="hello_ros" type="patrol_limo" output="screen">
+        <!-- 안정성 우선 파라미터 -->
+        <param name="safe_distance" value="1.0"/>              <!-- 더 넉넉한 안전거리 -->
+        <param name="critical_distance" value="0.5"/>          <!-- 더 넉넉한 긴급거리 -->
+        <param name="obstacle_detection_threshold" value="5"/>  <!-- 5회 연속 감지 -->
+        <param name="clear_detection_threshold" value="3"/>     <!-- 3회 연속 클리어 -->
+        <param name="min_obstacle_points" value="8"/>           <!-- 최소 8개 포인트 -->
+        <param name="laser_angle_range" value="50.0"/>          <!-- 감지 각도 축소 -->
+        
+        <!-- 부드러운 움직임 -->
+        <param name="max_linear_speed" value="0.25"/>           <!-- 속도 제한 -->
+        <param name="max_angular_speed" value="0.4"/>           <!-- 회전 속도 제한 -->
+        <param name="stuck_threshold" value="10"/>              <!-- 정체 판단 완화 -->
+    </node>
 
     <!-- <group ns="robot1">
         <arg name="robot_name" value="robot1" />

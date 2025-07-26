@@ -7,6 +7,7 @@ sio_app = socketio.AsyncServer(async_mode="asgi", cors_allowed_origins="*")
 async def connect(sid, environ):
     print("Client connected:", sid)
 
+# 각 센서 데이터는 추가 필드가 포함되어도 그대로 중계됩니다.
 @sio_app.on("pose")
 async def handle_pose(sid, data):
     await sio_app.emit("pose_update", data)
@@ -30,3 +31,8 @@ async def handle_path(sid, data):
 @sio_app.on("scan")
 async def handle_scan(sid, data):
     await sio_app.emit("scan_update", data)
+
+@sio_app.on("cmd")
+async def handle_cmd(sid, data):
+    print(f"[DEBUG] cmd from web: {data}")
+    await sio_app.emit("cmd", data)

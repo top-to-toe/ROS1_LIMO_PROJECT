@@ -46,27 +46,6 @@ generate_messages(
 catkin_package()
 
 catkin_install_python(PROGRAMS
-  scripts/hello
-  scripts/moveTurtle
-  scripts/moveTurtleClass
-  scripts/mtpub
-  scripts/mtsub
-  scripts/mpub
-  scripts/msub
-  scripts/msub2
-  scripts/simpleServiceServer
-  scripts/simpleServiceClient
-  scripts/simpleServiceClient2
-  scripts/simpleParameter
-  scripts/simpleParameter2
-  scripts/myTopicPub
-  scripts/myTopicSub
-  scripts/addServer
-  scripts/addClient
-  scripts/timeActionServer
-  scripts/timeActionClient
-  scripts/timeActionClient2
-  scripts/circle_limo
   scripts/patrol_limo
   scripts/patrol_line_limo
   scripts/fireDetector_limo
