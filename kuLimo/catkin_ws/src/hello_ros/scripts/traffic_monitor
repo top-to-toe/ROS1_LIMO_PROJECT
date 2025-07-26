@@ -1,0 +1,116 @@
+#!/usr/bin/env python3
+import rospy
+from darknet_ros_msgs.msg import BoundingBoxes
+import time
+import csv
+import os
+
+class TrafficMonitor:
+    def __init__(self):
+        rospy.init_node('traffic_monitor', anonymous=True)
+
+        # ✅ 관심 있는 클래스 목록
+        self.target_classes = ["person", "dog", "cat", "car", "bus", "truck"]
+
+        # ✅ 유동량 카운트 저장
+        self.flow_count = {cls: 0 for cls in self.target_classes}
+        self.total_detections = 0
+
+        # ✅ 마지막 감지 시각
+        self.last_detection_time = time.time()
+
+        # ✅ 오늘 날짜 기반 CSV 파일명 생성
+        today_str = time.strftime("%Y-%m-%d", time.localtime())
+        self.log_file = os.path.expanduser(f"~/traffic_log_{today_str}.csv")
+        self.prepare_csv()
+
+        # ✅ YOLO 결과 구독
+        rospy.Subscriber("/darknet_ros/bounding_boxes", BoundingBoxes, self.callback)
+
+        # ✅ 주기적으로 상태 출력 (2초마다)
+        self.status_timer = rospy.Timer(rospy.Duration(2.0), self.print_status)
+
+        rospy.loginfo("✅ TrafficMonitor started! 감지 클래스: %s", self.target_classes)
+        rospy.loginfo("CSV 저장 위치: %s", self.log_file)
+
+    def prepare_csv(self):
+        """CSV 파일이 없으면 헤더 추가"""
+        if not os.path.exists(self.log_file):
+            with open(self.log_file, "w", newline="") as f:
+                writer = csv.writer(f)
+                # CSV 헤더
+                header = ["timestamp"]
+                # 프레임별 감지 수
+                header += [f"frame_{cls}" for cls in self.target_classes]
+                # 누적 감지 수
+                header += [f"total_{cls}" for cls in self.target_classes]
+                header += ["total_detections"]
+                writer.writerow(header)
+
+    def save_csv(self, timestamp, frame_count):
+        """프레임별 감지 결과 CSV 저장"""
+        with open(self.log_file, "a", newline="") as f:
+            writer = csv.writer(f)
+            row = [timestamp]
+
+            # 프레임별 감지 수
+            for cls in self.target_classes:
+                row.append(frame_count.get(cls, 0))
+
+            # 누적 감지 수
+            for cls in self.target_classes:
+                row.append(self.flow_count.get(cls, 0))
+
+            # 총 감지 횟수
+            row.append(self.total_detections)
+
+            writer.writerow(row)
+
+    def callback(self, data: BoundingBoxes):
+        frame_detected = False
+        frame_count = {cls: 0 for cls in self.target_classes}
+
+        for box in data.bounding_boxes:
+            cls = box.Class
+            if cls in self.target_classes:
+                frame_detected = True
+                frame_count[cls] += 1
+                self.flow_count[cls] += 1
+                self.total_detections += 1
+
+        # ✅ 감지된 프레임이면 로그 출력 및 CSV 저장
+        if frame_detected:
+            self.last_detection_time = time.time()
+
+            # 프레임별 감지 출력
+            msg = "[감지] 이번 프레임: "
+            for cls, cnt in frame_count.items():
+                if cnt > 0:
+                    msg += f"{cls}={cnt} "
+            rospy.loginfo(msg)
+
+            # 누적 감지 출력
+            summary = "[누적] "
+            for cls, cnt in self.flow_count.items():
+                summary += f"{cls}={cnt} "
+            summary += f"(총 {self.total_detections}회 감지)"
+            rospy.loginfo(summary)
+
+            # ✅ CSV 저장
+            timestamp = time.strftime("%Y-%m-%d %H:%M:%S", time.localtime())
+            self.save_csv(timestamp, frame_count)
+
+    def print_status(self, event):
+        now = time.time()
+        if now - self.last_detection_time > 2.0:
+            rospy.loginfo("현재 감지된 객체 없음... (대기 중)")
+
+    def run(self):
+        rospy.spin()
+
+if __name__ == "__main__":
+    try:
+        monitor = TrafficMonitor()
+        monitor.run()
+    except rospy.ROSInterruptException:
+        pass
