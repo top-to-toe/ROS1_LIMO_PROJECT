@@ -1,0 +1,618 @@
+#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
+
+"""
+FSM(유한 상태 기계) 패턴 기반의 자율주행 순찰 노드입니다.
+이 버전은 파라미터화, 모듈화, 확장성을 극대화하여 더욱 견고하고 유연하게 설계되었습니다.
+
+=== FSM 패턴을 선택한 이유 ===
+1. 명확한 상태 분리: 각 상태(순찰, 회피, 복구)의 책임이 명확히 구분됩니다.
+   - 대안: if-else 분기문 → 문제: 상태가 많아질수록 복잡도가 기하급수적으로 증가
+   - FSM 장점: 새로운 상태 추가 시 기존 코드 수정 최소화
+
+2. 예측 가능한 동작: 현재 상태와 입력에 따라 다음 상태가 결정적으로 정해집니다.
+   - 대안: 단일 루프 + 플래그 관리 → 문제: 플래그 간 상호작용으로 예상치 못한 동작 발생
+   - FSM 장점: 상태 전환 규칙이 명시적이어서 디버깅과 테스트가 용이
+
+3. 확장성과 유지보수성: 새로운 기능(예: 충전, 특수임무) 추가 시 기존 로직에 영향 최소화
+   - 대안: 절차적 프로그래밍 → 문제: 기능 추가 시 전체 코드 수정 필요
+   - FSM 장점: 새로운 상태와 전환 규칙만 추가하면 됨
+
+=== move_base와 직접 제어의 하이브리드 접근법 ===
+- move_base 사용: 장거리 경로 계획과 일반적인 장애물 회피는 검증된 네비게이션 스택 활용
+- 직접 cmd_vel 제어: 즉각적인 반응이 필요한 상황(긴급 회피, 정체 복구)에서만 사용
+- 장점: 안정성(move_base)과 반응성(직접 제어)의 최적 조합
+
+주요 기능:
+- 정의된 순찰 지점(Waypoint)을 순차적으로 이동합니다.
+- 'move_base'를 이용해 장거리 경로 계획을 수행합니다.
+- LiDAR 센서를 이용해 전방 장애물을 감지하고, 즉시 회피 동작을 수행합니다.
+- 로봇이 움직이지 못하는 '정체' 상태를 감지하고, 스스로 복구 동작을 수행합니다.
+- 각 상태(순찰, 회피, 복구 등)가 명확히 분리되어 있어 코드의 확장 및 유지보수가 용이합니다.
+- ROS 파라미터 서버를 활용하여 런타임에 설정을 변경할 수 있도록 유연성을 높였습니다.
+"""
+
+import rospy
+import actionlib
+import math
+import tf.transformations as transformations # 쿼터니언 변환을 위해 표준 라이브러리 사용
+
+# ROS 메시지 타입 임포트
+from geometry_msgs.msg import Twist       # 로봇의 속도 제어 메시지
+from move_base_msgs.msg import MoveBaseAction, MoveBaseGoal  # move_base 연동 메시지
+from sensor_msgs.msg import LaserScan     # LiDAR 센서 데이터 메시지
+from nav_msgs.msg import Odometry         # 로봇의 주행 기록(위치, 속도) 메시지
+
+class PatrolNodeFSM:
+    def __init__(self):
+        """
+        노드 초기화 함수
+        FSM 상태, 파라미터, ROS 통신(Publisher/Subscriber) 등 노드 운영에 필요한 모든 요소를 설정합니다.
+
+        === 초기화 순서가 중요한 이유 ===
+        1. 상태 정의 → 파라미터 설정 → ROS 통신 → 타이머 설정 순으로 진행
+        2. 의존성 순서: 상태와 파라미터가 먼저 설정되어야 콜백 함수들이 올바르게 동작
+        3. move_base 연결 확인을 초기에 수행하여 시스템 전체의 가용성을 보장
+        """
+        # ROS 노드 초기화
+        rospy.init_node('patrol_node_fsm')
+
+        # =========================================================================
+        # === FSM (Finite State Machine) 상태 정의 ===
+        # 로봇이 가질 수 있는 모든 상태를 상수로 정의하여 코드의 가독성을 높이고 오타를 방지합니다.
+        #
+        # === 상수 사용의 장점 ===
+        # - 대안: 문자열 직접 사용 ("PATROLLING") → 문제: 오타 시 런타임 에러, IDE 지원 부족
+        # - 현재 방식: 상수 정의 → 장점: 컴파일 타임 오타 검증, IDE 자동완성, 일괄 변경 용이
+        # =========================================================================
+        self.STATE_IDLE = 'IDLE'                # 시작 대기 및 외부 명령 대기 상태
+        self.STATE_PATROLLING = 'PATROLLING'    # move_base를 이용해 순찰 지점으로 주행하는 상태
+        self.STATE_AVOIDING = 'AVOIDING'        # 장애물 감지 후 cmd_vel을 직접 제어해 회피하는 상태
+        self.STATE_RECOVERY = 'RECOVERY'        # 정체 상태 감지 후 cmd_vel을 직접 제어해 복구하는 상태
+        self.STATE_GOAL_REACHED = 'GOAL_REACHED'# 순찰 지점 도착 후 다음 지점으로 가기 전 잠시 대기하는 상태
+
+        # FSM의 현재 상태를 저장하는 변수. IDLE에서 시작합니다.
+        self.current_state = self.STATE_IDLE
+        # 마지막으로 상태가 변경된 시각을 기록 (시간 기반 로직에 사용)
+        self.last_state_change_time = rospy.Time.now()
+
+        # =========================================================================
+        # === 파라미터 정의 (ROS 파라미터 서버 활용) ===
+        # 노드의 동작을 결정하는 주요 값들을 ROS 파라미터 서버에서 가져옵니다.
+        # 이를 통해 코드 수정 없이 런타임에 파라미터를 변경할 수 있습니다.
+        #
+        # === ROS 파라미터 서버 사용의 장점 ===
+        # - 대안: 하드코딩 또는 YAML 파일만 사용 → 문제: 배포 후 런타임 변경 어려움
+        # - 현재 방식: rosparam get/set 또는 launch 파일에서 동적 변경 가능
+        # - 유연성: 개발/테스트/운영 환경에서 각기 다른 값 적용 용이
+        # =========================================================================
+
+        # 순찰 지점 정의 (좌표계: map frame 기준)
+        # ROS 파라미터 서버에서 'patrol_points' 파라미터를 가져옵니다.
+        self.patrol_points = rospy.get_param('~patrol_points') # 필수 파라미터이므로 기본값 없음
+        self.patrol_index = 0  # 현재 목표로 하는 순찰 지점의 인덱스
+        # 목표 도착 후 다음 목표까지 대기하는 시간 (초)
+        self.goal_wait_time = rospy.Duration(rospy.get_param('~goal_wait_time'))
+
+        # 장애물 감지 관련 파라미터
+        self.obstacle_distance_threshold = rospy.get_param('~obstacle_distance_threshold')  # 전방 장애물 감지 거리(m)
+        self.laser_angle_range = rospy.get_param('~laser_angle_range')             # 전방 감지 각도 범위(degree)
+        self.min_obstacle_points = rospy.get_param('~min_obstacle_points')          # 장애물 판단 최소 감지 포인트 수
+        self.min_valid_laser_readings = rospy.get_param('~min_valid_laser_readings') # 장애물 판단을 위한 최소 유효 LiDAR 포인트 수
+
+        # 정체(Stuck) 감지 관련 파라미터
+        self.stuck_check_interval = rospy.get_param('~stuck_check_interval') # 정체 상태 확인 주기(초)
+        self.stuck_threshold_time = rospy.get_param('~stuck_threshold_time') # 이 시간(초) 동안
+        self.stuck_threshold_dist = rospy.get_param('~stuck_threshold_dist') # 이 거리(m) 미만으로 움직였을 경우 정체로 판단
+        self.stuck_counter = 0          # 정체된 시간을 누적하는 카운터
+        self.position_history = []      # 정체 판단을 위해 로봇의 과거 위치를 저장하는 리스트
+
+        # 회피 및 복구 동작 관련 파라미터
+        self.avoidance_turn_speed = rospy.get_param('~avoidance_turn_speed')   # 장애물 회피 시 제자리 회전 속도 (rad/s)
+        self.avoidance_timeout = rospy.get_param('~avoidance_timeout')     # 회피 동작 최대 허용 시간 (무한 회전 방지)
+        self.recovery_backup_speed = rospy.get_param('~recovery_backup_speed') # 정체 복구 시 후진 속도 (m/s)
+        self.recovery_backup_time = rospy.get_param('~recovery_backup_time')   # 정체 복구 시 후진하는 시간 (초)
+
+        # FSM 업데이트 주기 (Hz)
+        self.fsm_update_frequency = rospy.get_param('~fsm_update_frequency')
+
+        # =========================================================================
+        # === ROS 통신 설정 ===
+        # 다른 노드와 데이터를 주고받기 위한 Publisher, Subscriber, Action Client를 설정합니다.
+        # =========================================================================
+        # 로봇의 움직임을 직접 제어하기 위한 Publisher (토픽: /cmd_vel)
+        self.cmd_vel_pub = rospy.Publisher('/cmd_vel', Twist, queue_size=1)
+        # 로봇의 현재 위치와 속도를 받아오기 위한 Subscriber
+        rospy.Subscriber('/odom', Odometry, self._odom_callback)
+        # LiDAR 센서 데이터를 받아오기 위한 Subscriber
+        rospy.Subscriber('/scan', LaserScan, self._laser_callback)
+
+        # 경로 계획 및 주행을 담당하는 'move_base' 노드와 통신하기 위한 Action Client
+        self.move_base_client = actionlib.SimpleActionClient('move_base', MoveBaseAction)
+        rospy.loginfo("move_base 서버 연결 대기 중...")
+        # 10초 동안 move_base 서버를 기다림. 연결되지 않으면 노드를 종료하여 문제를 알림.
+        if not self.move_base_client.wait_for_server(rospy.Duration(10.0)):
+            rospy.logerr("move_base 서버를 찾을 수 없습니다! 노드를 종료합니다.")
+            rospy.signal_shutdown("move_base 연결 실패")
+            return
+        rospy.loginfo("move_base 서버 연결 성공.")
+
+        # =========================================================================
+        # === 내부 변수 및 타이머 설정 ===
+        # =========================================================================
+        self.laser_data = None  # 가장 최근의 LiDAR 데이터를 저장
+        self.is_move_base_active = False  # move_base에 목표를 보낸 상태인지 추적
+
+        # FSM의 핵심 로직을 주기적으로 실행하기 위한 타이머 설정
+        # 1초 후, _start_patrol 함수를 딱 한 번 실행하여 순찰을 시작 (IDLE -> PATROLLING)
+        rospy.Timer(rospy.Duration(1.0), self._start_patrol, oneshot=True)
+        # 0.2초(5Hz)마다 _update_fsm 함수를 실행하여 현재 상태에 맞는 동작을 수행
+        rospy.Timer(rospy.Duration(1.0 / self.fsm_update_frequency), self._update_fsm)
+        # 1초마다 _check_if_stuck_timer_cb 함수를 실행하여 로봇의 정체 여부를 확인
+        rospy.Timer(rospy.Duration(self.stuck_check_interval), self._check_if_stuck_timer_cb)
+
+        # ROS 노드 종료 시 _shutdown 함수가 호출되도록 등록 (안전한 종료를 위함)
+        rospy.on_shutdown(self._shutdown)
+        rospy.loginfo(f"FSM 순찰 노드 초기화 완료. 현재 상태: {self.current_state}")
+
+    def _change_state(self, new_state):
+        """
+        FSM의 상태를 변경하는 중앙 관리 함수.
+        상태 변경 시 로그를 남기고, 변경 시각을 기록하여 일관성을 유지합니다.
+
+        === 중앙집중식 상태 관리의 장점 ===
+        - 대안: 각 함수에서 직접 상태 변경 → 문제: 상태 변경 로직 분산, 일관성 문제
+        - 현재 방식: 단일 진입점 → 장점: 상태 변경 로깅, 검증, 부가 작업을 한 곳에서 처리
+        """
+        if self.current_state != new_state:
+            rospy.loginfo(f"상태 변경: {self.current_state} -> {new_state}")
+            self.current_state = new_state
+            self.last_state_change_time = rospy.Time.now()
+            # 상태 변경 시 이전 cmd_vel 명령을 정지시켜 예상치 못한 움직임 방지
+            self._stop_robot()
+
+    def _update_fsm(self, event):
+        """
+        FSM의 '심장 박동(heartbeat)'과 같은 메인 루프.
+        주기적으로 호출되며, 현재 상태에 따라 적절한 실행 함수로 분기합니다.
+
+        === 상태 기반 분기의 장점 ===
+        - 대안: 복잡한 조건문으로 모든 로직을 한 함수에 작성 → 문제: 코드 복잡도 증가, 유지보수 어려움
+        - 현재 방식: 상태별 전용 함수 → 장점: 각 상태의 로직이 독립적, 새로운 상태 추가 용이
+        """
+        if self.current_state == self.STATE_PATROLLING:
+            self._execute_patrolling()
+        elif self.current_state == self.STATE_AVOIDING:
+            self._execute_avoiding()
+        elif self.current_state == self.STATE_RECOVERY:
+            self._execute_recovery()
+        elif self.current_state == self.STATE_GOAL_REACHED:
+            self._execute_goal_reached()
+        # IDLE 상태일 때는 아무런 동작도 수행하지 않습니다.
+
+    # =========================================================================
+    # === 상태별 실행 함수 (_execute_...) ===
+    # 각 함수는 FSM의 한 가지 상태를 책임집니다.
+    # 각 함수의 책임: 1. 다른 상태로 전환될 조건을 확인 / 2. 현재 상태의 고유 동작 수행
+    #
+    # === 단일 책임 원칙(SRP) 적용 ===
+    # - 각 함수는 하나의 상태만을 담당하여 코드의 명확성과 테스트 용이성을 확보
+    # - 상태 전환 조건과 상태 동작이 함께 위치하여 로직의 일관성 보장
+    # =========================================================================
+
+    def _execute_patrolling(self):
+        """
+        [PATROLLING 상태]
+        - 역할: move_base를 이용해 목표 지점까지 주행하며, 동시에 위험 상황(장애물, 정체)을 감지합니다.
+        - 전환 조건 1: 전방에 장애물 감지 시 AVOIDING 상태로 전환합니다.
+        - 전환 조건 2: 로봇 정체 감지 시 RECOVERY 상태로 전환합니다.
+        - 행동: move_base 목표가 활성 상태인지 확인하고, 비활성 시 새로운 목표를 전송합니다.
+
+        === 우선순위 기반 조건 검사 ===
+        - 장애물 감지를 정체 감지보다 먼저 검사하는 이유: 즉각적인 안전 대응이 더 중요
+        - return 문을 사용하여 하나의 조건이 만족되면 다른 조건을 검사하지 않음 (효율성)
+        """
+        # 1. 상태 전환 조건 확인 (안전 관련 조건을 우선 검사)
+        if self._is_obstacle_near():
+            rospy.logwarn_throttle(1, "전방 장애물 감지! AVOIDING 상태로 전환합니다.")
+            # move_base의 현재 목표를 취소하고 cmd_vel 제어권을 가져옵니다.
+            if self.is_move_base_active:
+                self.move_base_client.cancel_all_goals()
+                self.is_move_base_active = False
+            self._change_state(self.STATE_AVOIDING)
+            return
+
+        # 정체 카운터는 _check_if_stuck_timer_cb에서 주기적으로 업데이트됩니다.
+        if self.stuck_counter >= self.stuck_threshold_time:
+            rospy.logwarn_throttle(1, "로봇이 정체되었습니다. RECOVERY 상태로 전환합니다.")
+            if self.is_move_base_active:
+                self.move_base_client.cancel_all_goals()
+                self.is_move_base_active = False
+            self.stuck_counter = 0 # 다음 정체 감지를 위해 카운터를 초기화합니다.
+            self._change_state(self.STATE_RECOVERY)
+            return
+
+        # 2. 현재 상태의 행동 수행
+        # move_base 클라이언트가 현재 목표를 수행하고 있지 않다면, 새로운 목표를 전송합니다.
+        # (예: 노드 시작 직후, 또는 회피/복구/대기 상태에서 복귀했을 때)
+        if not self.is_move_base_active:
+            self._send_move_base_goal()
+
+    def _execute_avoiding(self):
+        """
+        [AVOIDING 상태]
+        - 역할: cmd_vel을 직접 제어하여 제자리에서 회전하며 안전한 경로를 찾습니다.
+        - 전환 조건 1: 전방의 장애물이 사라지면 PATROLLING 상태로 복귀합니다.
+        - 전환 조건 2: 일정 시간 이상 회피 중이면 RECOVERY 상태로 전환합니다. (무한 회전 방지)
+        - 행동: 안전한 방향이 확보될 때까지 제자리에서 회전 속도를 발행합니다.
+        """
+        # 1. 상태 전환 조건 확인
+        if not self._is_obstacle_near():
+            rospy.loginfo("장애물 회피 완료. PATROLLING 상태로 복귀합니다.")
+            self._stop_robot()
+            rospy.sleep(0.5)   # 안정화를 위한 짧은 대기 (관성으로 인한 오버슈트 방지)
+            self._change_state(self.STATE_PATROLLING)
+            return
+
+        avoid_duration = (rospy.Time.now() - self.last_state_change_time).to_sec()
+        if avoid_duration > self.avoidance_timeout:
+            rospy.logwarn(f"장애물 회피 타임아웃 ({self.avoidance_timeout:.1f}초). RECOVERY 상태로 전환합니다.")
+            self._change_state(self.STATE_RECOVERY)
+            return
+
+        # 2. 현재 상태의 행동 수행
+        twist = Twist()
+        twist.angular.z = self.avoidance_turn_speed # 설정된 속도로 회전
+        twist.linear.x = 0.0 # 회전 중 전진 속도는 명시적으로 0으로 설정
+        self.cmd_vel_pub.publish(twist)
+
+    def _execute_recovery(self):
+        """
+        [RECOVERY 상태]
+        - 역할: cmd_vel을 직접 제어하여 후진함으로써 정체 상황에서 벗어납니다.
+        - 전환 조건: 설정된 시간만큼 후진한 후 PATROLLING 상태로 복귀합니다.
+        - 행동: 설정된 시간 동안 후진 속도를 발행합니다.
+        """
+        # 1. 상태 전환 조건 확인
+        if (rospy.Time.now() - self.last_state_change_time).to_sec() > self.recovery_backup_time:
+            rospy.loginfo("복구 동작 완료. PATROLLING 상태로 복귀합니다.")
+            self._stop_robot()
+            rospy.sleep(0.5) # 복구 완료 후 안정화 대기 (후진 관성 해소)
+            self._change_state(self.STATE_PATROLLING)
+            return
+
+        # 2. 현재 상태의 행동 수행
+        twist = Twist()
+        twist.linear.x = self.recovery_backup_speed # 설정된 속도로 후진
+        twist.angular.z = 0.0 # 후진 중 회전 속도는 명시적으로 0으로 설정
+        self.cmd_vel_pub.publish(twist)
+
+    def _execute_goal_reached(self):
+        """
+        [GOAL_REACHED 상태]
+        - 역할: 순찰 지점에 도착한 후, 다음 지점으로 출발하기 전까지 잠시 대기합니다.
+        - 전환 조건: 설정된 대기 시간이 지나면 다음 순찰 지점을 설정하고 PATROLLING 상태로 전환합니다.
+        - 행동: 아무런 움직임 없이 대기합니다.
+
+        === 대기 상태를 별도로 분리한 이유 ===
+        - 대안: 목표 도달 즉시 다음 목표로 이동 → 문제: 급작스러운 방향 전환으로 기계적 스트레스
+        - 현재 방식: 잠시 대기 후 이동 → 장점: 부드러운 동작, 시스템 안정화 시간 확보
+        - 추가 이점: 향후 지점별 특수 작업(촬영, 센서 데이터 수집 등) 추가 시 확장 용이
+        """
+        # 1. 상태 전환 조건 확인
+        if rospy.Time.now() - self.last_state_change_time > self.goal_wait_time:
+            # 다음 순찰 지점 인덱스를 계산합니다. 마지막 지점이면 처음으로 돌아갑니다.
+            self.patrol_index = (self.patrol_index + 1) % len(self.patrol_points)
+            rospy.loginfo(f"다음 순찰 지점({self.patrol_index + 1}/{len(self.patrol_points)})으로 이동을 시작합니다.")
+            self._change_state(self.STATE_PATROLLING)
+            return
+
+        # 2. 현재 상태의 행동 수행 (대기)
+        # 명시적으로 아무것도 하지 않음 - 대기 상태의 의도를 명확히 표현
+        pass
+
+    # =========================================================================
+    # === ROS 콜백 및 헬퍼 함수 ===
+    # 보조적인 역할을 수행하는 함수들입니다.
+    # =========================================================================
+
+    def _start_patrol(self, event):
+        """
+        노드 시작 시 IDLE 상태에서 PATROLLING 상태로 전환하는 트리거 함수
+
+        === 지연 시작 방식의 장점 ===
+        - 대안: 초기화 즉시 순찰 시작 → 문제: 다른 노드들(move_base 등)이 준비되지 않을 수 있음
+        - 현재 방식: 1초 후 시작 → 장점: 시스템 전체의 안정화 시간 확보
+        """
+        rospy.loginfo("순찰 시작 - PATROLLING 상태로 전환")
+        self._change_state(self.STATE_PATROLLING)
+
+    def _send_move_base_goal(self):
+        """
+        현재 순찰 지점 정보를 MoveBaseGoal 메시지로 만들어 move_base에 전송합니다.
+        """
+        if not self.patrol_points:
+            rospy.logwarn("순찰 지점이 정의되지 않았습니다. 목표를 전송할 수 없습니다.")
+            return
+
+        point = self.patrol_points[self.patrol_index]
+        goal = MoveBaseGoal()
+        goal.target_pose.header.frame_id = "map"
+        goal.target_pose.header.stamp = rospy.Time.now()
+        goal.target_pose.pose.position.x = point['x']
+        goal.target_pose.pose.position.y = point['y']
+
+        # yaw값이 이미 radian 단위이므로 변환 없이 직접 사용합니다.
+        # 파라미터로 받은 yaw 값의 단위가 radian임을 가정합니다. (매우 중요)
+        yaw_rad = point['yaw']
+
+        # 오일러 각을 쿼터니언으로 변환하여 ROS 메시지에 설정
+        # tf.transformations 라이브러리를 사용하여 더 견고하고 검증된 변환을 수행합니다.
+        q = transformations.quaternion_from_euler(0, 0, yaw_rad)
+        goal.target_pose.pose.orientation.x = q[0]
+        goal.target_pose.pose.orientation.y = q[1]
+        goal.target_pose.pose.orientation.z = q[2]
+        goal.target_pose.pose.orientation.w = q[3]
+
+        # Action 서버에 목표를 전송하고, 완료 시 호출될 콜백 함수를 등록합니다.
+        self.move_base_client.send_goal(goal, done_cb=self._move_base_done_callback)
+        self.is_move_base_active = True
+        rospy.loginfo(f"move_base 목표 전송: 지점 {self.patrol_index + 1}/{len(self.patrol_points)} "
+                     f"위치({point['x']:.2f}, {point['y']:.2f}) 방향({math.degrees(yaw_rad):.1f}도)")
+
+    def _move_base_done_callback(self, state, result):
+        """
+        move_base가 목표 수행을 완료(성공/실패/취소)했을 때 호출되는 콜백 함수.
+        이 콜백은 비동기적으로 실행됩니다.
+
+        === 상태 기반 콜백 처리의 중요성 ===
+        - 문제 상황: 회피 중에 이전 목표가 취소되어 콜백이 호출되는 경우
+        - 해결 방법: 현재 상태가 PATROLLING일 때만 처리하여 원치 않는 상태 변경 방지
+        - 장점: 상태 기계의 일관성 보장, 예상치 못한 동작 방지
+        """
+        self.is_move_base_active = False
+        # PATROLLING 상태에서만 이 콜백을 처리하여, 다른 상태(예: AVOIDING)에서
+        # move_base 목표가 취소되었을 때 원치 않는 상태 변경이 일어나는 것을 방지합니다.
+        if self.current_state == self.STATE_PATROLLING:
+            if state == actionlib.GoalStatus.SUCCEEDED:
+                rospy.loginfo(f"순찰 지점 {self.patrol_index + 1} 도달 성공!")
+            else:
+                # 실패 상태에 대한 더 자세한 로그 정보 제공
+                rospy.logwarn(f"순찰 지점 {self.patrol_index + 1} 도달 실패 (상태 코드: {state}). "
+                             f"다음 지점으로 진행합니다.")
+
+            # 성공 여부와 관계없이 GOAL_REACHED 상태로 전환하여 다음 행동을 준비합니다.
+            self._change_state(self.STATE_GOAL_REACHED)
+        else:
+            rospy.logdebug(f"move_base 콜백 무시: 현재 상태({self.current_state})가 PATROLLING이 아님.")
+
+    def _is_obstacle_near(self):
+        """
+        LiDAR 데이터를 분석하여 로봇 전방에 장애물이 있는지 확인합니다.
+
+        === 개선 사항 ===
+        1. 유효하지 않은 데이터 필터링 강화 (inf, nan, 0 값 처리)
+        2. 다중 포인트 검증으로 노이즈 내성 향상
+        3. 안전한 배열 인덱스 접근으로 런타임 오류 방지
+        4. 센서 특성을 고려한 최소 거리 임계값 적용
+        5. 파라미터화된 최소 유효 LiDAR 포인트 수 (min_valid_laser_readings) 추가.
+        """
+        if self.laser_data is None:
+            rospy.logwarn_throttle(5, "LiDAR 데이터가 수신되지 않았습니다.")
+            return False
+
+        ranges = self.laser_data.ranges
+        if not ranges or len(ranges) == 0:
+            rospy.logwarn_throttle(5, "LiDAR 데이터가 비어있습니다.")
+            return False
+
+        # 설정된 전방 각도 범위 내의 LiDAR 데이터만 필터링합니다.
+        # `angle_min`, `angle_increment`는 라디안 단위입니다.
+        angle_rad_half = math.radians(self.laser_angle_range / 2.0)
+
+        # LiDAR 데이터의 중앙 인덱스 계산
+        center_index = len(ranges) // 2
+
+        # 전방 감지 범위에 해당하는 인덱스 계산
+        # `angle_increment`가 0일 경우, division by zero 에러 방지
+        if self.laser_data.angle_increment == 0:
+            rospy.logerr_throttle(5, "LiDAR angle_increment가 0입니다. 장애물 감지 불가.")
+            return False
+
+        search_range_indices = int(angle_rad_half / self.laser_data.angle_increment)
+
+        # 안전한 배열 인덱스 계산 (경계값 검증)
+        # Python의 슬라이싱은 경계를 자동으로 처리하지만, 명시적으로 `max`와 `min`을 사용해 안전성을 높입니다.
+        start_idx = max(0, center_index - search_range_indices)
+        end_idx = min(len(ranges), center_index + search_range_indices + 1) # +1은 슬라이싱의 특성상 end_idx 포함X 때문
+
+        front_ranges = ranges[start_idx:end_idx]
+
+        # 다중 포인트 검증으로 노이즈 내성 강화
+        obstacle_count = 0
+        valid_readings_in_fov = 0 # 전방 시야각 내의 유효한 측정값 수
+
+        for distance in front_ranges:
+            # 유효한 측정값 범위 (센서의 최소/최대 감지 거리 고려)
+            # `math.isinf`와 `math.isnan`으로 무한대 및 NaN 값 필터링
+            if not (math.isinf(distance) or math.isnan(distance)) and \
+               self.laser_data.range_min < distance < self.laser_data.range_max:
+                valid_readings_in_fov += 1
+                if distance < self.obstacle_distance_threshold:
+                    obstacle_count += 1
+
+        # 충분한 유효 데이터가 있을 때만 판단
+        # `min_valid_laser_readings` 파라미터를 사용하여 튜닝 가능하도록 합니다.
+        if valid_readings_in_fov < self.min_valid_laser_readings:
+            rospy.logwarn_throttle(10, f"전방 유효 LiDAR 데이터 부족 ({valid_readings_in_fov}/{self.min_valid_laser_readings}개). 판단 보류.")
+            return False
+
+        # 다중 포인트에서 동시 감지되었을 때만 장애물로 판단
+        is_obstacle = obstacle_count >= self.min_obstacle_points
+
+        if is_obstacle:
+            rospy.loginfo_throttle(2, f"장애물 감지: {obstacle_count}/{valid_readings_in_fov}개 포인트에서 "
+                                    f"{self.obstacle_distance_threshold}m 이내 감지")
+
+        return is_obstacle
+
+    def _check_if_stuck_timer_cb(self, event):
+        """
+        주기적인 타이머에 의해 호출되어 로봇의 정체 상태를 갱신합니다.
+
+        === 개선 사항 ===
+        1. 위치 히스토리 충분성 검증 강화
+        2. 상태별 정체 감지 로직 세분화
+        3. 디버깅을 위한 상세 로그 추가
+        4. 메모리 효율성을 위한 히스토리 크기 관리
+        5. 정확한 시간 계산을 위한 `rospy.Duration` 활용
+        """
+        # PATROLLING 상태일 때만 정체 감지 로직을 수행합니다.
+        # 다른 상태에서는 정체 카운터를 초기화하여 잘못된 판단을 방지합니다.
+        if self.current_state != self.STATE_PATROLLING:
+            if self.stuck_counter > 0:
+                rospy.logdebug("비순찰 상태로 정체 카운터 초기화")
+            self.stuck_counter = 0
+            # 히스토리도 초기화하여 다음에 PATROLLING으로 돌아왔을 때 깨끗하게 시작
+            self.position_history.clear()
+            return
+
+        # 위치 히스토리에 현재 로봇 위치를 추가하고 오래된 데이터를 정리합니다.
+        # _odom_callback에서 이미 처리되므로 여기서는 추가 작업이 필요 없습니다.
+
+        # 정체 판단에 필요한 최소 히스토리 길이를 계산합니다.
+        # `stuck_threshold_time` 동안 `stuck_check_interval` 마다 데이터가 쌓인다고 가정.
+        required_history_length = int(self.stuck_threshold_time / self.stuck_check_interval) + 1 # 시작점+끝점 포함
+
+        # 히스토리가 정체 판단에 필요한 시간만큼 충분히 쌓였는지 확인합니다.
+        if len(self.position_history) < required_history_length:
+            self.stuck_counter = 0 # 히스토리가 부족하면 정체 판단을 보류하고 카운터 초기화
+            rospy.logdebug_throttle(5, f"위치 히스토리 부족: {len(self.position_history)}/{required_history_length}. 정체 판단 보류.")
+            return
+
+        # 충분한 히스토리가 있을 때만 정체 판단 수행
+        # 과거 `stuck_threshold_time` 전의 위치와 현재 위치 사이의 유클리드 거리를 계산합니다.
+        # 정확한 시간 간격을 기준으로 과거 위치를 가져오기 위해 인덱스를 계산합니다.
+        first_pos_index = -required_history_length # 리스트의 끝에서부터 필요한 길이만큼 거슬러 올라감
+
+        first_pos = self.position_history[first_pos_index]
+        last_pos = self.position_history[-1] # 항상 가장 최신 위치
+
+        dist_moved = math.sqrt(
+            (last_pos[0] - first_pos[0])**2 +
+            (last_pos[1] - first_pos[1])**2
+        )
+
+        # 이동 거리가 임계값보다 작으면 정체 시간을 누적하고, 그렇지 않으면 초기화합니다.
+        if dist_moved < self.stuck_threshold_dist:
+            self.stuck_counter += self.stuck_check_interval
+            rospy.logdebug(f"정체 감지 중: {self.stuck_counter:.1f}/{self.stuck_threshold_time:.1f}초 "
+                          f"(이동거리: {dist_moved:.3f}m)")
+
+            # 정체 임계값에 근접하면 경고 로그
+            if self.stuck_counter >= self.stuck_threshold_time * 0.8:
+                rospy.logwarn_throttle(2, f"정체 경고: {self.stuck_counter:.1f}초간 {dist_moved:.3f}m만 이동")
+
+        else:
+            if self.stuck_counter > 0:
+                rospy.loginfo(f"정체 해제: {self.stuck_counter:.1f}초 만에 {dist_moved:.2f}m 이동 감지")
+            self.stuck_counter = 0
+
+    def _odom_callback(self, msg):
+        """
+        Odometry 메시지를 수신할 때마다 로봇의 현재 위치를 position_history에 추가합니다.
+
+        === 효율적인 히스토리 관리 ===
+        - 고정 크기 버퍼 사용으로 메모리 사용량 일정하게 유지
+        - FIFO 방식으로 오래된 데이터 자동 제거
+        - 정체 감지에 필요한 최소한의 데이터만 보관
+        """
+        pos = msg.pose.pose.position
+        self.position_history.append((pos.x, pos.y))
+
+        # 메모리 효율성을 위한 히스토리 크기 관리
+        # 정체 감지에 필요한 최대 시간 + 여유분만큼의 데이터만 보관
+        history_len_limit = int(self.stuck_threshold_time / self.stuck_check_interval) + 2
+        if len(self.position_history) > history_len_limit:
+            self.position_history.pop(0)  # 가장 오래된 데이터 제거
+
+    def _laser_callback(self, msg):
+        """
+        LaserScan 메시지를 수신할 때마다 최신 데이터를 내부 변수에 저장합니다.
+
+        === 센서 데이터 신선도 보장 ===
+        - 단순 대입 방식으로 항상 최신 데이터 유지
+        - 별도 검증 없이 raw 데이터 저장 (처리 시점에서 검증)
+        - 콜백 빈도가 높으므로 최소한의 작업만 수행
+        """
+        self.laser_data = msg
+
+    def _stop_robot(self):
+        """
+        로봇의 모든 움직임을 즉시 정지시킵니다.
+
+        === 안전 정지 메커니즘 ===
+        - 모든 속도 성분(선속도, 각속도)을 0으로 설정
+        - Twist() 기본 생성자가 모든 값을 0으로 초기화함을 활용
+        - 즉시 발행하여 빠른 응답성 보장
+        """
+        stop_msg = Twist()  # 모든 속도 성분이 0으로 초기화됨
+        self.cmd_vel_pub.publish(stop_msg)
+        rospy.logdebug("로봇 정지 명령 발행")
+
+    def _shutdown(self):
+        """
+        ROS 노드 종료 시 호출되는 함수. 안전을 위해 로봇을 정지시킵니다.
+
+        === 안전한 종료 절차 ===
+        1. 진행 중인 move_base 목표 모두 취소
+        2. 로봇 즉시 정지
+        3. 사용자에게 종료 상태 알림
+
+        === 종료 시 정리 작업이 중요한 이유 ===
+        - move_base 목표가 남아있으면 다른 노드에서 로봇이 계속 움직일 수 있음
+        - 예상치 못한 종료 시에도 로봇이 안전한 상태로 유지
+        """
+        rospy.loginfo("순찰 노드 종료 중...")
+
+        # 진행 중인 모든 move_base 목표 취소
+        if hasattr(self, 'move_base_client') and self.move_base_client:
+            rospy.loginfo("진행 중인 move_base 목표를 취소합니다.")
+            self.move_base_client.cancel_all_goals()
+
+        # 로봇 즉시 정지
+        rospy.loginfo("로봇을 정지시킵니다.")
+        self._stop_robot()
+
+        # 안전 확인을 위해 정지 명령을 여러 번 발행 (네트워크 지연 등으로 인한 유실 대비)
+        for _ in range(3):
+            self._stop_robot()
+            rospy.sleep(0.1)
+
+        rospy.loginfo("순찰 노드 종료 완료.")
+
+if __name__ == '__main__':
+    """
+    스크립트의 메인 실행 부분.
+
+    === 메인 실행 패턴 ===
+    1. try-except 블록으로 예외 상황 처리
+    2. PatrolNodeFSM 인스턴스 생성 (모든 초기화 수행)
+    3. rospy.spin()으로 이벤트 루프 진입 (콜백 처리 대기)
+    4. 사용자 중단(Ctrl+C) 시 깔끔한 종료
+    """
+    try:
+        rospy.loginfo("=== FSM 기반 순찰 노드 시작 ===")
+        patrol_node = PatrolNodeFSM()
+        rospy.loginfo("노드 초기화 완료. 메시지 처리를 시작합니다...")
+        rospy.spin()
+    except rospy.ROSInterruptException:
+        # 사용자가 Ctrl+C로 중단했을 때
+        rospy.loginfo("사용자에 의한 노드 종료")
+    except Exception as e:
+        # 예상치 못한 오류 발생 시 상세 로깅
+        rospy.logerr(f"순찰 노드 실행 중 치명적인 오류 발생: {e}")
+        import traceback
+        rospy.logerr("오류 스택 트레이스:\n" + traceback.format_exc())
+    finally:
+        rospy.loginfo("=== FSM 기반 순찰 노드 종료 ===")
