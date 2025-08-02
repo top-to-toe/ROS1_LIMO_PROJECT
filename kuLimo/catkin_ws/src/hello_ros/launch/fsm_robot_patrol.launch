@@ -1,8 +1,8 @@
 <launch>
     <!-- <node name="fireDetector_limo" pkg="hello_ros" type="fireDetector_limo" output="screen"/> -->
     <node name="traffic_monitor" pkg="hello_ros" type="traffic_monitor" output="screen"/>
-    <!-- <node name="patrol_node_fsm" pkg="hello_ros" type="patrol_limo_fsm" output="screen"> -->
-     <node name="patrol_limo" pkg="hello_ros" type="patrol_limo" output="screen">
+    <node name="patrol_node_fsm" pkg="hello_ros" type="patrol_limo_fsm" output="screen">
+    <!-- <node name="patrol_limo" pkg="hello_ros" type="patrol_limo" output="screen"> -->
         <rosparam file="$(find hello_ros)/config/patrol_fsm_params.yaml" command="load" />
     </node>
 

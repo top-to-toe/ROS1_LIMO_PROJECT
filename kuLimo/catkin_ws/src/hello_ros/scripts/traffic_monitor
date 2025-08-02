@@ -5,7 +5,10 @@ import time
 import csv
 import os
 
+last_pose_time = 0
+
 class TrafficMonitor:
+
     def __init__(self):
         rospy.init_node('traffic_monitor', anonymous=True)
 
@@ -26,6 +29,8 @@ class TrafficMonitor:
 
         # ✅ YOLO 결과 구독
         rospy.Subscriber("/darknet_ros/bounding_boxes", BoundingBoxes, self.callback)
+
+        # rospy.Timer(rospy.Duration(0.2), pose_timer_event)      # 5Hz
 
         # ✅ 주기적으로 상태 출력 (2초마다)
         self.status_timer = rospy.Timer(rospy.Duration(2.0), self.print_status)
@@ -67,6 +72,12 @@ class TrafficMonitor:
             writer.writerow(row)
 
     def callback(self, data: BoundingBoxes):
+        global last_pose_time
+        now = time.time()
+        # ✅ YOLO 결과가 없으면 무시
+        if now - last_pose_time > 0.3:
+            return
+        last_pose_time = now
         frame_detected = False
         frame_count = {cls: 0 for cls in self.target_classes}
 
