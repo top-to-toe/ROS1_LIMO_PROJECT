@@ -23,17 +23,14 @@ generate_dynamic_reconfigure_options(
 
 add_message_files(
   FILES
-  MyTopic.msg
 )
 
 add_service_files(
   FILES
-  AddTwoInts.srv
 )
 
 add_action_files(
   FILES
-  TimeWait.action
 )
 
 generate_messages(
@@ -47,10 +44,10 @@ catkin_package()
 
 catkin_install_python(PROGRAMS
   scripts/patrol_limo
+  scripts/patrol_limo_fsm
   scripts/patrol_line_limo
   scripts/fireDetector_limo
   scripts/traffic_monitor
-  scripts/patrol_limo_fsm
   DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION}
 )
 

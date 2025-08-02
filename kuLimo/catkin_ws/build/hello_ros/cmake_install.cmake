@@ -58,30 +58,6 @@ if("x${CMAKE_INSTALL_COMPONENT}x" STREQUAL "xUnspecifiedx" OR NOT CMAKE_INSTALL_
 endif()
 
 if("x${CMAKE_INSTALL_COMPONENT}x" STREQUAL "xUnspecifiedx" OR NOT CMAKE_INSTALL_COMPONENT)
-  file(INSTALL DESTINATION "${CMAKE_INSTALL_PREFIX}/share/hello_ros/msg" TYPE FILE FILES "/home/sejongtp07/ROS1_LIMO_PROJECT/kuLimo/catkin_ws/src/hello_ros/msg/MyTopic.msg")
-endif()
-
-if("x${CMAKE_INSTALL_COMPONENT}x" STREQUAL "xUnspecifiedx" OR NOT CMAKE_INSTALL_COMPONENT)
-  file(INSTALL DESTINATION "${CMAKE_INSTALL_PREFIX}/share/hello_ros/srv" TYPE FILE FILES "/home/sejongtp07/ROS1_LIMO_PROJECT/kuLimo/catkin_ws/src/hello_ros/srv/AddTwoInts.srv")
-endif()
-
-if("x${CMAKE_INSTALL_COMPONENT}x" STREQUAL "xUnspecifiedx" OR NOT CMAKE_INSTALL_COMPONENT)
-  file(INSTALL DESTINATION "${CMAKE_INSTALL_PREFIX}/share/hello_ros/action" TYPE FILE FILES "/home/sejongtp07/ROS1_LIMO_PROJECT/kuLimo/catkin_ws/src/hello_ros/action/TimeWait.action")
-endif()
-
-if("x${CMAKE_INSTALL_COMPONENT}x" STREQUAL "xUnspecifiedx" OR NOT CMAKE_INSTALL_COMPONENT)
-  file(INSTALL DESTINATION "${CMAKE_INSTALL_PREFIX}/share/hello_ros/msg" TYPE FILE FILES
-    "/home/sejongtp07/ROS1_LIMO_PROJECT/kuLimo/catkin_ws/devel/share/hello_ros/msg/TimeWaitAction.msg"
-    "/home/sejongtp07/ROS1_LIMO_PROJECT/kuLimo/catkin_ws/devel/share/hello_ros/msg/TimeWaitActionGoal.msg"
-    "/home/sejongtp07/ROS1_LIMO_PROJECT/kuLimo/catkin_ws/devel/share/hello_ros/msg/TimeWaitActionResult.msg"
-    "/home/sejongtp07/ROS1_LIMO_PROJECT/kuLimo/catkin_ws/devel/share/hello_ros/msg/TimeWaitActionFeedback.msg"
-    "/home/sejongtp07/ROS1_LIMO_PROJECT/kuLimo/catkin_ws/devel/share/hello_ros/msg/TimeWaitGoal.msg"
-    "/home/sejongtp07/ROS1_LIMO_PROJECT/kuLimo/catkin_ws/devel/share/hello_ros/msg/TimeWaitResult.msg"
-    "/home/sejongtp07/ROS1_LIMO_PROJECT/kuLimo/catkin_ws/devel/share/hello_ros/msg/TimeWaitFeedback.msg"
-    )
-endif()
-
-if("x${CMAKE_INSTALL_COMPONENT}x" STREQUAL "xUnspecifiedx" OR NOT CMAKE_INSTALL_COMPONENT)
   file(INSTALL DESTINATION "${CMAKE_INSTALL_PREFIX}/share/hello_ros/cmake" TYPE FILE FILES "/home/sejongtp07/ROS1_LIMO_PROJECT/kuLimo/catkin_ws/build/hello_ros/catkin_generated/installspace/hello_ros-msg-paths.cmake")
 endif()
 
@@ -137,6 +113,10 @@ if("x${CMAKE_INSTALL_COMPONENT}x" STREQUAL "xUnspecifiedx" OR NOT CMAKE_INSTALL_
 endif()
 
 if("x${CMAKE_INSTALL_COMPONENT}x" STREQUAL "xUnspecifiedx" OR NOT CMAKE_INSTALL_COMPONENT)
+  file(INSTALL DESTINATION "${CMAKE_INSTALL_PREFIX}/lib/hello_ros" TYPE PROGRAM FILES "/home/sejongtp07/ROS1_LIMO_PROJECT/kuLimo/catkin_ws/build/hello_ros/catkin_generated/installspace/patrol_limo_fsm")
+endif()
+
+if("x${CMAKE_INSTALL_COMPONENT}x" STREQUAL "xUnspecifiedx" OR NOT CMAKE_INSTALL_COMPONENT)
   file(INSTALL DESTINATION "${CMAKE_INSTALL_PREFIX}/lib/hello_ros" TYPE PROGRAM FILES "/home/sejongtp07/ROS1_LIMO_PROJECT/kuLimo/catkin_ws/build/hello_ros/catkin_generated/installspace/patrol_line_limo")
 endif()
 
@@ -146,10 +126,6 @@ endif()
 
 if("x${CMAKE_INSTALL_COMPONENT}x" STREQUAL "xUnspecifiedx" OR NOT CMAKE_INSTALL_COMPONENT)
   file(INSTALL DESTINATION "${CMAKE_INSTALL_PREFIX}/lib/hello_ros" TYPE PROGRAM FILES "/home/sejongtp07/ROS1_LIMO_PROJECT/kuLimo/catkin_ws/build/hello_ros/catkin_generated/installspace/traffic_monitor")
-endif()
-
-if("x${CMAKE_INSTALL_COMPONENT}x" STREQUAL "xUnspecifiedx" OR NOT CMAKE_INSTALL_COMPONENT)
-  file(INSTALL DESTINATION "${CMAKE_INSTALL_PREFIX}/lib/hello_ros" TYPE PROGRAM FILES "/home/sejongtp07/ROS1_LIMO_PROJECT/kuLimo/catkin_ws/build/hello_ros/catkin_generated/installspace/patrol_limo_fsm")
 endif()
 
 if("x${CMAKE_INSTALL_COMPONENT}x" STREQUAL "xUnspecifiedx" OR NOT CMAKE_INSTALL_COMPONENT)

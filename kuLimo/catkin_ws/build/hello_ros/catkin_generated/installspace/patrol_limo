@@ -23,12 +23,18 @@ class ObstacleAvoidancePatrol:
         # 패트롤 지점들
         # UPDATED: Applying the provided patrol points
         self.patrol_points = [
-            {'x': -1.1, 'y': -3.09, 'yaw': -0.00137},
-            {'x': -3.37, 'y': -4.23, 'yaw': -0.00137},
-            {'x': -6.55, 'y': -0.138, 'yaw': -0.00137},
-            {'x': -7.7, 'y': 1.6, 'yaw': -0.00137},
-            {'x': -6.87, 'y': 5.61, 'yaw': -0.00143},
-            {'x': -0.00951, 'y': 12.1, 'yaw': -0.00143}
+            # {'x': -1.1, 'y': -3.09, 'yaw': -0.00137},
+            # {'x': -3.37, 'y': -4.23, 'yaw': -0.00137},
+            # {'x': -6.55, 'y': -0.138, 'yaw': -0.00137},
+            # {'x': -7.7, 'y': 1.6, 'yaw': -0.00137},
+            # {'x': -6.87, 'y': 5.61, 'yaw': -0.00143},
+            # {'x': -0.00951, 'y': 12.1, 'yaw': -0.00143}
+
+            {'x': 1.71, 'y': 1.44, 'yaw': -0.00143},
+            {'x': 0.38, 'y': 3.14, 'yaw': 0.00247},
+            {'x': -0.431, 'y': 2.57, 'yaw': -0.00137},
+            {'x': 0.207, 'y': 1.73, 'yaw': -0.00143},
+            {'x': -0.942, 'y': 1.76, 'yaw': -0.00143},
         ]
         
         self.move_base_available = False
@@ -47,7 +53,7 @@ class ObstacleAvoidancePatrol:
         
         # 장애물 회피 파라미터 (민감도 완화)
         self.safe_distance = rospy.get_param('~safe_distance', 0.8)  # 안전 거리 (m) - 증가
-        self.critical_distance = rospy.get_param('~critical_distance', 0.4)  # 긴급 정지 거리 (m) - 증가
+        self.critical_distance = rospy.get_param('~critical_distance', 0.3)  # 긴급 정지 거리 (m) - 증가
         self.avoidance_angle_step = rospy.get_param('~avoidance_angle_step', 30.0)  # 회피 각도 단위 (도)
         self.max_avoidance_attempts = rospy.get_param('~max_avoidance_attempts', 8)  # 최대 회피 시도 횟수
         self.stuck_threshold = rospy.get_param('~stuck_threshold', 8)  # 정체 감지 임계값 - 증가
@@ -57,7 +63,7 @@ class ObstacleAvoidancePatrol:
         self.obstacle_detection_count = 0
         self.obstacle_detection_threshold = rospy.get_param('~obstacle_detection_threshold', 3)  # 연속 3회 감지시 확정
         self.clear_detection_threshold = rospy.get_param('~clear_detection_threshold', 2)  # 연속 2회 클리어시 해제
-        self.min_obstacle_points = rospy.get_param('~min_obstacle_points', 5)  # 최소 장애물 포인트 수
+        self.min_obstacle_points = rospy.get_param('~min_obstacle_points', 50)  # 최소 장애물 포인트 수
         self.laser_angle_range = rospy.get_param('~laser_angle_range', 60.0)  # 레이저 감지 각도 범위 (도)
         
         # move_base 클라이언트 초기화

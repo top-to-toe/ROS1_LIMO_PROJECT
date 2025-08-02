@@ -38,10 +38,10 @@ import math
 import tf.transformations as transformations # 쿼터니언 변환을 위해 표준 라이브러리 사용
 
 # ROS 메시지 타입 임포트
-from geometry_msgs.msg import Twist       # 로봇의 속도 제어 메시지
+from geometry_msgs.msg import Twist      # 로봇의 속도 제어 메시지
 from move_base_msgs.msg import MoveBaseAction, MoveBaseGoal  # move_base 연동 메시지
-from sensor_msgs.msg import LaserScan     # LiDAR 센서 데이터 메시지
-from nav_msgs.msg import Odometry         # 로봇의 주행 기록(위치, 속도) 메시지
+from sensor_msgs.msg import LaserScan      # LiDAR 센서 데이터 메시지
+from nav_msgs.msg import Odometry          # 로봇의 주행 기록(위치, 속도) 메시지
 
 class PatrolNodeFSM:
     def __init__(self):
@@ -65,10 +65,10 @@ class PatrolNodeFSM:
         # - 대안: 문자열 직접 사용 ("PATROLLING") → 문제: 오타 시 런타임 에러, IDE 지원 부족
         # - 현재 방식: 상수 정의 → 장점: 컴파일 타임 오타 검증, IDE 자동완성, 일괄 변경 용이
         # =========================================================================
-        self.STATE_IDLE = 'IDLE'                # 시작 대기 및 외부 명령 대기 상태
-        self.STATE_PATROLLING = 'PATROLLING'    # move_base를 이용해 순찰 지점으로 주행하는 상태
-        self.STATE_AVOIDING = 'AVOIDING'        # 장애물 감지 후 cmd_vel을 직접 제어해 회피하는 상태
-        self.STATE_RECOVERY = 'RECOVERY'        # 정체 상태 감지 후 cmd_vel을 직접 제어해 복구하는 상태
+        self.STATE_IDLE = 'IDLE'               # 시작 대기 및 외부 명령 대기 상태
+        self.STATE_PATROLLING = 'PATROLLING'   # move_base를 이용해 순찰 지점으로 주행하는 상태
+        self.STATE_AVOIDING = 'AVOIDING'       # 장애물 감지 후 cmd_vel을 직접 제어해 회피하는 상태
+        self.STATE_RECOVERY = 'RECOVERY'       # 정체 상태 감지 후 cmd_vel을 직접 제어해 복구하는 상태
         self.STATE_GOAL_REACHED = 'GOAL_REACHED'# 순찰 지점 도착 후 다음 지점으로 가기 전 잠시 대기하는 상태
 
         # FSM의 현재 상태를 저장하는 변수. IDLE에서 시작합니다.
@@ -96,7 +96,7 @@ class PatrolNodeFSM:
 
         # 장애물 감지 관련 파라미터
         self.obstacle_distance_threshold = rospy.get_param('~obstacle_distance_threshold')  # 전방 장애물 감지 거리(m)
-        self.laser_angle_range = rospy.get_param('~laser_angle_range')             # 전방 감지 각도 범위(degree)
+        self.laser_angle_range = rospy.get_param('~laser_angle_range')            # 전방 감지 각도 범위(degree)
         self.min_obstacle_points = rospy.get_param('~min_obstacle_points')          # 장애물 판단 최소 감지 포인트 수
         self.min_valid_laser_readings = rospy.get_param('~min_valid_laser_readings') # 장애물 판단을 위한 최소 유효 LiDAR 포인트 수
 
@@ -104,12 +104,12 @@ class PatrolNodeFSM:
         self.stuck_check_interval = rospy.get_param('~stuck_check_interval') # 정체 상태 확인 주기(초)
         self.stuck_threshold_time = rospy.get_param('~stuck_threshold_time') # 이 시간(초) 동안
         self.stuck_threshold_dist = rospy.get_param('~stuck_threshold_dist') # 이 거리(m) 미만으로 움직였을 경우 정체로 판단
-        self.stuck_counter = 0          # 정체된 시간을 누적하는 카운터
-        self.position_history = []      # 정체 판단을 위해 로봇의 과거 위치를 저장하는 리스트
+        self.stuck_counter = 0     # 정체된 시간을 누적하는 카운터
+        self.position_history = []     # 정체 판단을 위해 로봇의 과거 위치를 저장하는 리스트
 
         # 회피 및 복구 동작 관련 파라미터
         self.avoidance_turn_speed = rospy.get_param('~avoidance_turn_speed')   # 장애물 회피 시 제자리 회전 속도 (rad/s)
-        self.avoidance_timeout = rospy.get_param('~avoidance_timeout')     # 회피 동작 최대 허용 시간 (무한 회전 방지)
+        self.avoidance_timeout = rospy.get_param('~avoidance_timeout')  # 회피 동작 최대 허용 시간 (무한 회전 방지)
         self.recovery_backup_speed = rospy.get_param('~recovery_backup_speed') # 정체 복구 시 후진 속도 (m/s)
         self.recovery_backup_time = rospy.get_param('~recovery_backup_time')   # 정체 복구 시 후진하는 시간 (초)
 
@@ -212,15 +212,28 @@ class PatrolNodeFSM:
         - 장애물 감지를 정체 감지보다 먼저 검사하는 이유: 즉각적인 안전 대응이 더 중요
         - return 문을 사용하여 하나의 조건이 만족되면 다른 조건을 검사하지 않음 (효율성)
         """
+        
+        # =========================================================================
+        # === [수정된 부분] 직접 장애물 감지 로직 비활성화 ===
+        # 아래의 _is_obstacle_near() 호출 부분이 기존의 '좌우 흔들림'과 '잦은 회피' 문제의
+        # 핵심 원인이었습니다. move_base는 자체적으로 정교한 Local Planner를 가지고 있어
+        # 사소한 장애물을 알아서 회피합니다. FSM이 너무 민감하게 개입하여 move_base의
+        # 경로 계획을 방해하고, 목표를 계속 취소시키는 악순환을 유발했습니다.
+        #
+        # 따라서 이 로직을 비활성화하고, move_base가 스스로 주행하도록 신뢰합니다.
+        # FSM은 이제 move_base가 정말로 움직이지 못하는 '정체(Stuck)' 상황에서만
+        # 개입하여 RECOVERY 동작을 수행하도록 역할을 변경합니다.
+        # =========================================================================
+        
         # 1. 상태 전환 조건 확인 (안전 관련 조건을 우선 검사)
-        if self._is_obstacle_near():
-            rospy.logwarn_throttle(1, "전방 장애물 감지! AVOIDING 상태로 전환합니다.")
-            # move_base의 현재 목표를 취소하고 cmd_vel 제어권을 가져옵니다.
-            if self.is_move_base_active:
-                self.move_base_client.cancel_all_goals()
-                self.is_move_base_active = False
-            self._change_state(self.STATE_AVOIDING)
-            return
+        # if self._is_obstacle_near():  # <-- 이 로직을 비활성화하여 move_base와의 충돌을 방지합니다.
+        #     rospy.logwarn_throttle(1, "전방 장애물 감지! AVOIDING 상태로 전환합니다.")
+        #     # move_base의 현재 목표를 취소하고 cmd_vel 제어권을 가져옵니다.
+        #     if self.is_move_base_active:
+        #         self.move_base_client.cancel_all_goals()
+        #         self.is_move_base_active = False
+        #     self._change_state(self.STATE_AVOIDING)
+        #     return
 
         # 정체 카운터는 _check_if_stuck_timer_cb에서 주기적으로 업데이트됩니다.
         if self.stuck_counter >= self.stuck_threshold_time:
@@ -245,12 +258,17 @@ class PatrolNodeFSM:
         - 전환 조건 1: 전방의 장애물이 사라지면 PATROLLING 상태로 복귀합니다.
         - 전환 조건 2: 일정 시간 이상 회피 중이면 RECOVERY 상태로 전환합니다. (무한 회전 방지)
         - 행동: 안전한 방향이 확보될 때까지 제자리에서 회전 속도를 발행합니다.
+        
+        === [참고] 로직 유지 ===
+        # 이 상태는 이제 _is_obstacle_near()에 의해 직접 호출되지 않을 수 있습니다.
+        # 하지만 다른 로직(예: 외부 명령)에 의해 호출될 가능성을 위해 코드는 유지합니다.
+        # 만약 이 상태가 더 이상 필요 없다면 완전히 삭제해도 무방합니다.
         """
         # 1. 상태 전환 조건 확인
         if not self._is_obstacle_near():
             rospy.loginfo("장애물 회피 완료. PATROLLING 상태로 복귀합니다.")
             self._stop_robot()
-            rospy.sleep(0.5)   # 안정화를 위한 짧은 대기 (관성으로 인한 오버슈트 방지)
+            rospy.sleep(0.5)  # 안정화를 위한 짧은 대기 (관성으로 인한 오버슈트 방지)
             self._change_state(self.STATE_PATROLLING)
             return
 
@@ -358,7 +376,7 @@ class PatrolNodeFSM:
         self.move_base_client.send_goal(goal, done_cb=self._move_base_done_callback)
         self.is_move_base_active = True
         rospy.loginfo(f"move_base 목표 전송: 지점 {self.patrol_index + 1}/{len(self.patrol_points)} "
-                     f"위치({point['x']:.2f}, {point['y']:.2f}) 방향({math.degrees(yaw_rad):.1f}도)")
+                      f"위치({point['x']:.2f}, {point['y']:.2f}) 방향({math.degrees(yaw_rad):.1f}도)")
 
     def _move_base_done_callback(self, state, result):
         """
@@ -379,7 +397,7 @@ class PatrolNodeFSM:
             else:
                 # 실패 상태에 대한 더 자세한 로그 정보 제공
                 rospy.logwarn(f"순찰 지점 {self.patrol_index + 1} 도달 실패 (상태 코드: {state}). "
-                             f"다음 지점으로 진행합니다.")
+                              f"다음 지점으로 진행합니다.")
 
             # 성공 여부와 관계없이 GOAL_REACHED 상태로 전환하여 다음 행동을 준비합니다.
             self._change_state(self.STATE_GOAL_REACHED)
@@ -452,7 +470,7 @@ class PatrolNodeFSM:
 
         if is_obstacle:
             rospy.loginfo_throttle(2, f"장애물 감지: {obstacle_count}/{valid_readings_in_fov}개 포인트에서 "
-                                    f"{self.obstacle_distance_threshold}m 이내 감지")
+                                       f"{self.obstacle_distance_threshold}m 이내 감지")
 
         return is_obstacle
 
@@ -507,7 +525,7 @@ class PatrolNodeFSM:
         if dist_moved < self.stuck_threshold_dist:
             self.stuck_counter += self.stuck_check_interval
             rospy.logdebug(f"정체 감지 중: {self.stuck_counter:.1f}/{self.stuck_threshold_time:.1f}초 "
-                          f"(이동거리: {dist_moved:.3f}m)")
+                           f"(이동거리: {dist_moved:.3f}m)")
 
             # 정체 임계값에 근접하면 경고 로그
             if self.stuck_counter >= self.stuck_threshold_time * 0.8:
