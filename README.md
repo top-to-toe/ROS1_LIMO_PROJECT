@@ -85,6 +85,7 @@ mask = cv2.inRange(hsv, lower_red, upper_red)
 ---
 
 ## 📁 프로젝트 디렉토리 구조
+```
 ROS1_LIMO_PROJECT/
 ├── hello_ros/
 │   ├── launch/
@@ -98,7 +99,7 @@ ROS1_LIMO_PROJECT/
 ├── ros_web_interface/
 │   ├── ...
 └── ...
-
+```
 ---
 
 ## 🙌 팀원 역할
