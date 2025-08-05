@@ -2,7 +2,7 @@
 
 > 자율주행 로봇 `wego Limo`와 ROS1 (Noetic), Python, YOLOv4, FastAPI 등을 활용한 스마트 시티 기반 실시간 순찰 및 관제 시스템입니다.
 > 프로젝트 발표 자료본 (https://github.com/top-to-toe/ROS1_LIMO_PROJECT/blob/main/Smart%20Guardian_%20%EC%9E%90%EC%9C%A8%EC%A3%BC%ED%96%89%20%EB%A1%9C%EB%B4%87%20Limo%20%ED%99%9C%EC%9A%A9%20%EA%B8%B0%EB%B0%98%20%EC%8A%A4%EB%A7%88%ED%8A%B8%20%EA%B4%80%EC%A0%9C%20%EC%8B%9C%EC%8A%A4%ED%85%9C_%EB%B0%9C%ED%91%9C%20%EC%B5%9C%EC%A2%85%EB%B3%B8.pdf)
-> (https://docs.google.com/presentation/d/17cGrGaiJ5c-mRxx9dpXn4djH_mYeKLga38XjvzCEVSg/edit?pli=1&slide=id.g36eb4455bfd_0_72#slide=id.g36eb4455bfd_0_72)
+> 프로젝트 과정 진행 기록 (https://docs.google.com/presentation/d/17cGrGaiJ5c-mRxx9dpXn4djH_mYeKLga38XjvzCEVSg/edit?pli=1&slide=id.g36eb4455bfd_0_72#slide=id.g36eb4455bfd_0_72)
 ---
 
 ## 📌 프로젝트 개요
